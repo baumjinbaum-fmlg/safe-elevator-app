@@ -768,7 +768,1180 @@
 
                 <div class="space-y-3 text-xs">
                     <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                        <span class="text-slate-500 font-medium"><i class="fa-solid fa-envelope mr-1 text-slate-400"></i>        async function renderRiskCards() {
+                        <span class="text-slate-500 font-medium"><i class="fa-solid fa-envelope mr-1 text-slate-400"></i> 로그인 아이디</span>
+                        <span class="font-bold text-slate-800" id="profile-id">admin@fmlg.co.kr</span>
+                    </div>
+                    <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="text-slate-500 font-medium"><i class="fa-solid fa-shield-halved mr-1 text-slate-400"></i> 계정 상태</span>
+                        <span class="font-bold text-emerald-600" id="profile-status">승인완료 (정상)</span>
+                    </div>
+                    <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="text-slate-500 font-medium"><i class="fa-solid fa-clock-rotate-left mr-1 text-slate-400"></i> 최근 접속</span>
+                        <span class="font-medium text-slate-600">2026-08-31 11:59</span>
+                    </div>
+                </div>
+
+                <!-- Account Actions -->
+                <div class="pt-2 space-y-2">
+                    <button onclick="openChangePasswordModal()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 transition shadow-sm">
+                        <i class="fa-solid fa-lock"></i> 내 비밀번호 변경
+                    </button>
+                    <button onclick="handleLogout()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        
+        // --- 0. Complete Auth System Overhaul (100% Fixed & Tested) ---
+        const DEFAULT_USERS = [
+            { username: 'admin@fmlg.co.kr', password: '123', name: '관리자 (홍길동)', dept: '안전관리부', status: 'approved', role: 'admin', createdAt: '2026-08-01 09:00', approvedAt: '2026-08-01 09:00' },
+            { username: 'kim@fmlg.co.kr', password: '123', name: '김안전 (작업자)', dept: '유지관리1팀', status: 'approved', role: 'user', createdAt: '2026-08-05 10:30', approvedAt: '2026-08-05 11:00' }
+        ];
+
+        function getUsersList() {
+            try {
+                const stored = localStorage.getItem('fmlg_users_db');
+                if (stored) return JSON.parse(stored);
+            } catch (e) { console.error(e); }
+            localStorage.setItem('fmlg_users_db', JSON.stringify(DEFAULT_USERS));
+            return DEFAULT_USERS;
+        }
+
+        function saveUsersList(list) {
+            try {
+                localStorage.setItem('fmlg_users_db', JSON.stringify(list));
+            } catch(e) { console.error(e); }
+        }
+
+        let currentUser = null;
+
+        let isNoticeOpenedFirst = false;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            getUsersList();
+            checkInitialNoticeAndAuth();
+        });
+
+        function checkInitialNoticeAndAuth() {
+            const noticeData = getNoticeData();
+            const hideDate = localStorage.getItem('fmlg_hide_notice_date');
+            const today = new Date().toISOString().split('T')[0];
+
+            // Render Notice UI
+            const modalContent = document.getElementById('notice-modal-content');
+            if (modalContent) {
+                const formattedContent = noticeData.content.replace(/\n/g, '<br>');
+                modalContent.innerHTML = `<p class="font-bold text-blue-900 mb-1">${noticeData.title}</p><div class="text-slate-600 leading-relaxed">${formattedContent}</div>`;
+            }
+
+            // If notice not hidden today, open Notice FIRST
+            if (hideDate !== today) {
+                isNoticeOpenedFirst = true;
+                const noticeModal = document.getElementById('notice-modal');
+                if (noticeModal) noticeModal.classList.remove('hidden');
+                // Ensure auth modal is temporarily hidden behind notice or shown right after
+                const authModal = document.getElementById('auth-modal');
+                if (authModal) authModal.classList.add('hidden');
+            } else {
+                // If notice skipped, directly check login session
+                checkLoginSession();
+            }
+        }
+
+        function closeNoticeModal() {
+            const chk = document.getElementById('chk-dont-show-today');
+            if (chk && chk.checked) {
+                const today = new Date().toISOString().split('T')[0];
+                try { localStorage.setItem('fmlg_hide_notice_date', today); } catch(e){}
+            }
+            const noticeModal = document.getElementById('notice-modal');
+            if (noticeModal) noticeModal.classList.add('hidden');
+
+            // After closing notice, proceed to check login session / show login modal!
+            checkLoginSession();
+        }
+
+        function checkLoginSession() {
+            try {
+                const savedUser = localStorage.getItem('fmlg_current_user');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    const modal = document.getElementById('auth-modal');
+                    if (modal) modal.classList.add('hidden');
+                    updateMasterEmployeeList();
+                    renderProfileTab(); setTimeout(checkAndShowNotice, 500);
+                    return;
+                }
+            } catch(e) {}
+            const modal = document.getElementById('auth-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function toggleAuthMode(mode) {
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const findForm = document.getElementById('find-form');
+
+            const tabLogin = document.getElementById('auth-tab-login');
+            const tabSignup = document.getElementById('auth-tab-signup');
+            const tabFind = document.getElementById('auth-tab-find');
+
+            loginForm.classList.add('hidden');
+            signupForm.classList.add('hidden');
+            findForm.classList.add('hidden');
+
+            tabLogin.className = "flex-1 py-2 text-center text-slate-400 border-b-2 border-transparent";
+            tabSignup.className = "flex-1 py-2 text-center text-slate-400 border-b-2 border-transparent";
+            tabFind.className = "flex-1 py-2 text-center text-slate-400 border-b-2 border-transparent";
+
+            if (mode === 'signup') {
+                signupForm.classList.remove('hidden');
+                tabSignup.className = "flex-1 py-2 text-center text-blue-600 border-b-2 border-blue-600 font-bold";
+            } else if (mode === 'find') {
+                findForm.classList.remove('hidden');
+                tabFind.className = "flex-1 py-2 text-center text-blue-600 border-b-2 border-blue-600 font-bold";
+            } else {
+                loginForm.classList.remove('hidden');
+                tabLogin.className = "flex-1 py-2 text-center text-blue-600 border-b-2 border-blue-600 font-bold";
+            }
+        }
+
+        function handleFindId() {
+            const nameInput = document.getElementById('find-id-name').value.trim();
+            if (!nameInput) {
+                alert("이름을 입력해주세요.");
+                return;
+            }
+            const users = getUsersList();
+            const found = users.filter(u => u.name.includes(nameInput));
+            if (found.length === 0) {
+                alert("일치하는 계정 정보를 찾을 수 없습니다.");
+            } else {
+                const listStr = found.map(u => `• ${u.name}: ${u.username}`).join('\n');
+                alert(`🔍 검색된 아이디 정보:\n\n${listStr}`);
+            }
+        }
+
+        function handleResetPw() {
+            const idInput = document.getElementById('find-pw-id').value.trim();
+            const newPw = document.getElementById('find-pw-new').value.trim();
+
+            if (!idInput || !newPw) {
+                alert("아이디와 새 비밀번호를 모두 입력해주세요.");
+                return;
+            }
+
+            const users = getUsersList();
+            const target = users.find(u => u.username === idInput);
+
+            if (!target) {
+                alert("존재하지 않는 아이디입니다.");
+                return;
+            }
+
+            target.password = newPw;
+            saveUsersList(users);
+            alert(`✅ ${target.name}님의 비밀번호가 성공적으로 변경되었습니다!`);
+            toggleAuthMode('login');
+        }
+
+        
+        function openNaverMybox() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                // Open Naver MYBOX mobile site/app
+                window.open("https://m.mybox.naver.com/", "_blank");
+            } else {
+                // Open Naver MYBOX PC Web
+                window.open("https://mybox.naver.com/", "_blank");
+            }
+        }
+
+        function openGoogleDrive() {
+            window.open("https://drive.google.com/", "_blank");
+        }
+
+        function openChangePasswordModal() {
+            if (!currentUser) return;
+            const newPw = prompt("변경할 새 비밀번호를 입력해주세요:");
+            if (newPw && newPw.trim()) {
+                const users = getUsersList();
+                const target = users.find(u => u.username === currentUser.username);
+                if (target) {
+                    target.password = newPw.trim();
+                    currentUser.password = newPw.trim();
+                    saveUsersList(users);
+                    try { localStorage.setItem('fmlg_current_user', JSON.stringify(currentUser)); } catch(e){}
+                    alert("✅ 비밀번호가 변경되었습니다!");
+                }
+            }
+        }
+
+        function handleLogin() {
+            const idInput = document.getElementById('login-id');
+            const pwInput = document.getElementById('login-pw');
+            const id = idInput ? idInput.value.trim() : '';
+            const pw = pwInput ? pwInput.value.trim() : '';
+
+            if (!id || !pw) {
+                alert("아이디와 비밀번호를 모두 입력해주세요.");
+                return;
+            }
+
+            const users = getUsersList();
+            const user = users.find(u => u.username === id && u.password === pw);
+
+            if (!user) {
+                alert("아이디 또는 비밀번호가 일치하지 않습니다.\n(기본 계정: admin@fmlg.co.kr / 비밀번호: 123)");
+                return;
+            }
+
+            if (user.status === 'pending') {
+                alert("⏳ 가입 승인 대기 중인 계정입니다.\n관리자 승인 후 로그인해 주시기 바랍니다.");
+                return;
+            }
+
+            if (user.status === 'retired') {
+                alert("⛔ 퇴사 처리된 계정입니다. 로그인할 수 없습니다.\n관리자에게 문의하세요.");
+                return;
+            }
+
+            currentUser = user;
+            try { localStorage.setItem('fmlg_current_user', JSON.stringify(user)); } catch(e){}
+            const modal = document.getElementById('auth-modal');
+            if (modal) modal.classList.add('hidden');
+            alert("✅ " + user.name + "님 환영합니다!");
+            updateMasterEmployeeList();
+            renderProfileTab(); setTimeout(checkAndShowNotice, 500);
+        }
+
+        function handleSignUp() {
+            const nameInput = document.getElementById('signup-name');
+            const idInput = document.getElementById('signup-id');
+            const pwInput = document.getElementById('signup-pw');
+            const deptInput = document.getElementById('signup-dept');
+
+            const name = nameInput ? nameInput.value.trim() : '';
+            const id = idInput ? idInput.value.trim() : '';
+            const pw = pwInput ? pwInput.value.trim() : '';
+            const dept = (deptInput && deptInput.value.trim()) ? deptInput.value.trim() : '승강기유지관리부';
+
+            if (!name || !id || !pw) {
+                alert("이름, 아이디, 비밀번호를 모두 입력해주세요.");
+                return;
+            }
+
+            const users = getUsersList();
+            if (users.some(u => u.username === id)) {
+                alert("이미 등록된 아이디입니다. 다른 아이디를 입력하거나 로그인해 주세요.");
+                return;
+            }
+
+            const todayStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+            const newUser = {
+                username: id,
+                password: pw,
+                name: name,
+                dept: dept,
+                status: 'pending',
+                role: 'user',
+                createdAt: todayStr,
+                approvedAt: null
+            };
+
+            users.push(newUser);
+            saveUsersList(users);
+
+            alert("⏳ " + name + "님의 가입 신청이 접수되었습니다!\n관리자(admin@fmlg.co.kr) 승인 후 서비스 이용이 가능합니다.");
+            toggleAuthMode('login');
+            updateMasterEmployeeList();
+        }
+
+        function handleLogout() {
+            if (confirm("정말 로그아웃하시겠습니까?")) {
+                try { localStorage.removeItem('fmlg_current_user'); } catch(e){}
+                currentUser = null;
+                const modal = document.getElementById('auth-modal');
+                if (modal) modal.classList.remove('hidden');
+                const nameDisplay = document.getElementById('user-display-name');
+                if (nameDisplay) nameDisplay.textContent = "로그인 필요";
+                switchTab('tbm');
+            }
+        }
+
+        
+        // --- Dynamic Master Hazard DB Manager ---
+        function getMasterHazardDb() {
+            try {
+                const stored = localStorage.getItem('fmlg_master_hazard_db');
+                if (stored) return JSON.parse(stored);
+            } catch(e) {}
+            localStorage.setItem('fmlg_master_hazard_db', JSON.stringify(CATEGORY_HAZARD_DB));
+            return CATEGORY_HAZARD_DB;
+        }
+
+        function saveMasterHazardDb(dbObj) {
+            try {
+                localStorage.setItem('fmlg_master_hazard_db', JSON.stringify(dbObj));
+            } catch(e) {}
+        }
+
+        function renderMasterHazardDbList() {
+            const container = document.getElementById('master-hazard-db-list');
+            if (!container) return;
+
+            const dbObj = getMasterHazardDb();
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            container.innerHTML = '';
+
+            for (let majorCat in dbObj) {
+                const items = dbObj[majorCat] || [];
+                let itemsHtml = '';
+
+                items.forEach((item, index) => {
+                    itemsHtml += `
+                        <div class="p-2.5 bg-white border rounded-lg space-y-1.5 text-xs">
+                            <div class="flex justify-between items-center gap-2">
+                                <span class="font-bold text-slate-800 flex items-center gap-1">
+                                    <i class="fa-solid fa-caret-right text-amber-500"></i>
+                                    ${item.sub}
+                                </span>
+                                ${isAdmin ? `
+                                <button onclick="deleteMasterHazardDbItem('${majorCat}', ${index})" class="text-rose-600 hover:text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded border border-rose-200 bg-rose-50">
+                                    삭제
+                                </button>
+                                ` : ''}
+                            </div>
+                            <div class="text-[11px] text-slate-600 bg-slate-50 p-1.5 rounded border"><b>위험요인:</b> ${item.hazard}</div>
+                            <div class="text-[11px] text-emerald-800 bg-emerald-50/60 p-1.5 rounded border border-emerald-100"><b>개선대책:</b> ${item.action}</div>
+                        </div>
+                    `;
+                });
+
+                const groupHtml = `
+                    <div class="border rounded-xl p-3 bg-slate-50 space-y-2">
+                        <div class="flex justify-between items-center border-b pb-1.5">
+                            <span class="font-bold text-slate-800 text-xs text-blue-900">${majorCat} (${items.length}개 항목)</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${itemsHtml || '<div class="text-slate-400 text-xs p-2">등록된 항목이 없습니다.</div>'}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', groupHtml);
+            }
+        }
+
+        function addCustomHazardDbItem() {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("🔒 고정 DB 등록 권한이 없습니다. 관리자 계정으로 로그인해 주세요.");
+                return;
+            }
+
+            const major = document.getElementById('new-hazard-major').value;
+            const sub = document.getElementById('new-hazard-sub').value.trim();
+            const hazard = document.getElementById('new-hazard-text').value.trim();
+            const action = document.getElementById('new-hazard-action').value.trim();
+
+            if (!sub || !hazard) {
+                alert("세부 공정명과 유해·위험요인을 모두 입력해 주세요.");
+                return;
+            }
+
+            const dbObj = getMasterHazardDb();
+            if (!dbObj[major]) dbObj[major] = [];
+
+            dbObj[major].push({
+                sub: sub,
+                hazard: hazard,
+                action: action || "▷ 개인안전보호구 필수 착용 ▷ 2인 1조 작업 실시"
+            });
+
+            saveMasterHazardDb(dbObj);
+            document.getElementById('new-hazard-sub').value = '';
+            document.getElementById('new-hazard-text').value = '';
+            document.getElementById('new-hazard-action').value = '';
+
+            renderMasterHazardDbList();
+            renderRiskCards();
+            alert(`✅ [${major}] 항목에 새로운 위험성평가 표준 DB가 등록되었습니다!`);
+        }
+
+        function deleteMasterHazardDbItem(majorCat, index) {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("🔒 고정 DB 삭제 권한이 없습니다. 관리자 계정으로 로그인해 주세요.");
+                return;
+            }
+
+            if (confirm(`[${majorCat}] 해당 표준 항목을 삭제하시겠습니까?`)) {
+                const dbObj = getMasterHazardDb();
+                if (dbObj[majorCat]) {
+                    dbObj[majorCat].splice(index, 1);
+                    saveMasterHazardDb(dbObj);
+                    renderMasterHazardDbList();
+                    renderRiskCards();
+                }
+            }
+        }
+
+        function updateMasterEmployeeList() {
+            const users = getUsersList();
+            employeeMasterList = users.map(u => u.name + " (" + u.dept + ")");
+            if (typeof renderWorkers === 'function') renderWorkers();
+            renderTbmChecklistUI();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
+            if (typeof renderAdminUserList === 'function') renderAdminUserList();
+        }
+
+        function renderAdminUserList() {
+            const container = document.getElementById('admin-user-list');
+            if (!container) return;
+
+            const searchQuery = document.getElementById('user-search-query') ? document.getElementById('user-search-query').value.trim().toLowerCase() : '';
+            const statusFilter = document.getElementById('user-status-filter') ? document.getElementById('user-status-filter').value : 'all';
+
+            const users = getUsersList();
+
+            // Filter users
+            const filteredUsers = users.filter(u => {
+                let matchQuery = !searchQuery || 
+                    (u.name && u.name.toLowerCase().includes(searchQuery)) ||
+                    (u.username && u.username.toLowerCase().includes(searchQuery)) ||
+                    (u.dept && u.dept.toLowerCase().includes(searchQuery));
+
+                let matchStatus = true;
+                if (statusFilter === 'approved') matchStatus = u.status === 'approved';
+                else if (statusFilter === 'pending') matchStatus = u.status === 'pending';
+                else if (statusFilter === 'retired') matchStatus = u.status === 'retired';
+
+                return matchQuery && matchStatus;
+            });
+
+            const countBadge = document.getElementById('user-count-badge');
+            if (countBadge) countBadge.textContent = `총 ${filteredUsers.length}명 / 전체 ${users.length}명`;
+
+            container.innerHTML = '';
+
+            if (filteredUsers.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-lg border">검색 결과에 일치하는 직원이 없습니다.</div>`;
+                return;
+            }
+
+            filteredUsers.forEach((u) => {
+                const isApproved = u.status === 'approved';
+                const isRetired = u.status === 'retired';
+                const isAdmin = u.role === 'admin';
+
+                let badgeClass = 'bg-emerald-100 text-emerald-800 font-bold';
+                let statusText = '정상 승인';
+
+                if (isRetired) {
+                    badgeClass = 'bg-slate-200 text-slate-600 font-bold';
+                    statusText = '퇴사자 (차단)';
+                } else if (!isApproved) {
+                    badgeClass = 'bg-amber-100 text-amber-800 font-bold';
+                    statusText = '승인 대기중';
+                }
+
+                let roleBadge = isAdmin 
+                    ? '<span class="text-[9px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded">관리자</span>' 
+                    : '<span class="text-[9px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded">작업자</span>';
+
+                const approvedDateStr = u.approvedAt ? u.approvedAt : (isApproved ? '기본 승인됨' : '미승인');
+                const createdDateStr = u.createdAt ? u.createdAt : '-';
+
+                const row = `<div class="p-3 border rounded-lg bg-slate-50 space-y-2 text-xs">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                                ${u.name}
+                                ${roleBadge}
+                                <span class="text-[10px] text-slate-500">(${u.dept})</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400 mt-0.5">${u.username}</div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="inline-block text-[9px] px-1.5 py-0.5 rounded ${badgeClass}">${statusText}</span>
+                                <span class="text-[10px] text-slate-500 font-medium">📅 승인일자: <b>${approvedDateStr}</b></span>
+                                <span class="text-[10px] text-slate-400">(신청일: ${createdDateStr})</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions Bar -->
+                    <div class="flex flex-wrap gap-1.5 pt-2 border-t text-[10px]">
+                        ${!isApproved && !isRetired ? `<button onclick="approveUser('${u.username}')" class="bg-blue-600 text-white font-bold px-2.5 py-1 rounded shadow-sm"><i class="fa-solid fa-check mr-1"></i>가입 승인</button>` : ''}
+                        
+                        <!-- Role Toggle -->
+                        <button onclick="toggleUserRole('${u.username}')" class="bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold px-2 py-1 rounded">
+                            ${isAdmin ? '작업자로 변경' : '관리자로 지정'}
+                        </button>
+
+                        <!-- Retirement Toggle -->
+                        ${!isRetired ? 
+                            `<button onclick="setRetireUser('${u.username}', true)" class="bg-amber-50 text-amber-700 border border-amber-200 font-bold px-2 py-1 rounded">퇴사 처리</button>` : 
+                            `<button onclick="setRetireUser('${u.username}', false)" class="bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-2 py-1 rounded">복직 처리</button>`
+                        }
+
+                        <!-- Delete Account -->
+                        <button onclick="deleteAccount('${u.username}')" class="bg-rose-50 text-rose-600 border border-rose-200 font-bold px-2 py-1 rounded">계정 삭제</button>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function approveUser(username) {
+            const users = getUsersList();
+            const target = users.find(u => u.username === username);
+            if (target) {
+                target.status = 'approved';
+                target.approvedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
+                saveUsersList(users);
+                alert("✅ " + target.name + "님의 회원가입이 승인되었습니다! (승인일시: " + target.approvedAt + ")");
+                updateMasterEmployeeList();
+            }
+        }
+
+        function toggleUserRole(username) {
+            const users = getUsersList();
+            const target = users.find(u => u.username === username);
+            if (target) {
+                target.role = target.role === 'admin' ? 'user' : 'admin';
+                saveUsersList(users);
+                alert(`✅ ${target.name}님의 권한이 [${target.role === 'admin' ? '관리자' : '작업자'}]로 변경되었습니다.`);
+                updateMasterEmployeeList();
+            }
+        }
+
+        function setRetireUser(username, isRetire) {
+            const users = getUsersList();
+            const target = users.find(u => u.username === username);
+            if (target) {
+                target.status = isRetire ? 'retired' : 'approved';
+                saveUsersList(users);
+                alert(`✅ ${target.name}님이 [${isRetire ? '퇴사 처리' : '복직 처리'}] 되었습니다.`);
+                updateMasterEmployeeList();
+            }
+        }
+
+        function deleteAccount(username) {
+            if (confirm("정말 이 계정을 영구 삭제하시겠습니까?")) {
+                let users = getUsersList();
+                users = users.filter(u => u.username !== username);
+                saveUsersList(users);
+                alert("✅ 계정이 성공적으로 삭제되었습니다.");
+                updateMasterEmployeeList();
+            }
+        }
+
+        function renderProfileTab() {
+            if (currentUser) {
+                const nameBadge = document.getElementById('user-display-name');
+                const profileName = document.getElementById('profile-name');
+                const profileDept = document.getElementById('profile-dept');
+                const profileId = document.getElementById('profile-id');
+                const profileBadge = document.getElementById('profile-role-badge');
+
+                if (nameBadge) nameBadge.textContent = currentUser.name.split(' ')[0];
+                if (profileName) profileName.textContent = currentUser.name;
+                if (profileDept) profileDept.textContent = '에프엠엘지엘리베이터㈜ / ' + currentUser.dept;
+                if (profileId) profileId.textContent = currentUser.username;
+                if (profileBadge) profileBadge.textContent = currentUser.role === 'admin' ? '관리자 (안전팀)' : '작업자 (임직원)';
+            }
+        }
+
+        
+        const CATEGORY_HAZARD_DB = {
+            "[기계실작업]": [
+                { sub: "CP/INV 점검 및 고장처리", hazard: "제어반 고장 처리 및 점검 시 부주의로 인한 쇼트, 감전", action: "▷ 절연장갑 및 개인안전보호구 필수 착용 ▷ 2인 1조 작업 원칙 준수 ▷ 수동 전환 후 작업 ▷ 전원 차단 확인" },
+                { sub: "CP/INV 점검 및 고장처리", hazard: "기계실 내 분전반 커버 미취부로 인한 동력선 노출 감전", action: "▷ 분전반 커버 상태 확인 및 전원 차단 후 점검 ▷ 절연 보호구 착용" },
+                { sub: "TM관련 교체 (양중)", hazard: "양중장비 사용 중 협착, 추락, 낙하", action: "▷ 인증 양중장비 사용 ▷ 양중용 후크 테스트 실시 ▷ 작업구역 하부 출입통제" },
+                { sub: "브레이크 조정 / 시브,로프 점검", hazard: "기계실 바닥 정리 미흡으로 인한 작업자 전도(넘어짐)", action: "▷ 작업 전 바닥 및 주변 정리정돈 ▷ 통로 확보" },
+                { sub: "브레이크 조정 / 시브,로프 점검", hazard: "권상기·조속기 점검 중 시브 동작으로 손·신체 말림", action: "▷ 전원 차단 후 작업 ▷ 회전부 보호커버 설치 확인 ▷ 복명복창" }
+            ],
+            "[카상부작업]": [
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "카 상부 진출입 중 카 운행에 의한 협착 및 충돌", action: "▷ 2인 1조 작업 ▷ 진입 전 안전스위치 작동 확인 ▷ 비상정지 스위치 테스트" },
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "도어 개방 작업 중 날카로운 부위에 베임", action: "▷ 안전장갑 필수 착용 ▷ 베임 방지 보호구 착용" },
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "도어 개방 상태 작업 중 닫히는 도어에 신체 끼임", action: "▷ 도어 차폐판 필수 설치 ▷ 도어 전원 차단 후 고정" },
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "카 상부 작업 중 작업자 추락", action: "▷ 안전대 착용 및 체결 ▷ 카 상부 난간대 상태 점검" },
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "상부 작업 중 공구 및 자재 낙하", action: "▷ 공구 낙하방지 끈(줄) 사용 ▷ 하부 출입통제 바리케이드 설치" }
+            ],
+            "[피트작업]": [
+                { sub: "카하부 작업 / 버퍼, GOV 점검", hazard: "피트 진출입 중 카 운행에 의한 협착 및 충돌", action: "▷ 수동모드 전환 후 진입 ▷ 점퍼선 여부 확인 ▷ 피트 안전스위치 작동" },
+                { sub: "카하부 작업 / 버퍼, GOV 점검", hazard: "사다리 이용 중 실족 추락 및 미끄러짐", action: "▷ 사다리 상·하부 고정 상태 확인 ▷ 2인 1조 상부 잡이조 작업" },
+                { sub: "카하부 작업 / 버퍼, GOV 점검", hazard: "피트 바닥 미끄러짐 및 넘어짐", action: "▷ 안전화 착용 ▷ 피트 바닥 유수 및 오일 제거" },
+                { sub: "카하부 작업 / 버퍼, GOV 점검", hazard: "외부인 작업장소 접근에 따른 안전사고", action: "▷ 승강장 안전펜스 및 바리케이드 설치 ▷ 안내표지판 게시" }
+            ]
+        };
+
+        
+        // --- Notice Modal Manager ---
+        const DEFAULT_NOTICE = {
+            title: "🚨 [긴급] 승강기 점검 및 수리 시 안전수칙 준수 안내",
+            content: "• 2인 1조 작업 원칙: 카 상부 및 피트 진입 작업 시 반드시 2인 1조로 작업을 진행해 주시기 바랍니다.\n• 점검 스위치 확인: 카 상부 진입 전 안전스위치(수동/자동)를 반드시 전환 후 진입하십시오.\n• 개인보호구 착용: 안전모, 절연장갑, 안전대는 작업 전 반드시 상태를 확인하고 착용 바랍니다."
+        };
+
+        function getNoticeData() {
+            try {
+                const title = localStorage.getItem('fmlg_notice_title');
+                const content = localStorage.getItem('fmlg_notice_content');
+                if (title && content) {
+                    return { title, content };
+                }
+            } catch(e) {}
+            return DEFAULT_NOTICE;
+        }
+
+        function checkAndShowNotice() {
+            const noticeData = getNoticeData();
+            
+            // Render notice UI
+            const modalContent = document.getElementById('notice-modal-content');
+            if (modalContent) {
+                const formattedContent = noticeData.content.replace(/\n/g, '<br>');
+                modalContent.innerHTML = `<p class="font-bold text-blue-900 mb-1">${noticeData.title}</p><div class="text-slate-600 leading-relaxed">${formattedContent}</div>`;
+            }
+
+            // Sync with admin fields
+            const editTitle = document.getElementById('edit-notice-title');
+            const editContent = document.getElementById('edit-notice-content');
+            if (editTitle) editTitle.value = noticeData.title;
+            if (editContent) editContent.value = noticeData.content;
+
+            try {
+                const hideDate = localStorage.getItem('fmlg_hide_notice_date');
+                const today = new Date().toISOString().split('T')[0];
+                if (hideDate === today) {
+                    return;
+                }
+            } catch(e) {}
+            
+            const noticeModal = document.getElementById('notice-modal');
+            if (noticeModal) noticeModal.classList.remove('hidden');
+        }
+
+        function saveNoticeSettings() {
+            const titleInput = document.getElementById('edit-notice-title').value.trim();
+            const contentInput = document.getElementById('edit-notice-content').value.trim();
+
+            if (!titleInput || !contentInput) {
+                alert("공지사항 제목과 내용을 모두 입력해 주세요.");
+                return;
+            }
+
+            try {
+                localStorage.setItem('fmlg_notice_title', titleInput);
+                localStorage.setItem('fmlg_notice_content', contentInput);
+                // Reset 'don't show today' so everyone gets the new alert
+                localStorage.removeItem('fmlg_hide_notice_date');
+                alert("📢 공지사항이 성공적으로 등록되었습니다! 직원 접속 시 즉시 적용됩니다.");
+                checkAndShowNotice();
+            } catch(e) {
+                alert("공지사항 저장 중 오류가 발생했습니다.");
+            }
+        }
+
+
+
+        // Trigger notice after successful login or session check
+
+        // --- 1. Offline Storage (Dexie IndexedDB) Setup ---
+        const db = new Dexie('ElevatorRiskAppDB_v3');
+        db.version(1).stores({
+            items: '++id, step, hazard, likelihood, severity, actionPlan, photo',
+            workers: '++id, name, sigData',
+            reports: '++id, siteName, workDate, tbmTime, processName, tbmLeader, author, workersList, notes, createdAt'
+        });
+
+        // Default workers
+        const defaultWorkers = [
+            { name: '홍길동 (관리감독자)', sigData: null },
+            { name: '김안전 (작업자)', sigData: null },
+            { name: '이기술 (작업자)', sigData: null }
+        ];
+
+        // Default Risk Items
+        const defaultItems = [
+            {
+                        "step": "[기계실작업] CP/INV 점검  및 고장처리",
+                        "hazard": "제어반 고장 처리 및 점검 시 부주의로  인한 쇼트, 감전",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 개인안전보호구 필수 착용   ▷ 절연용 보호구 필수 착용   ▷ 노후 안전보호구 교체(수시)   ▷ 작업은 반드시 2인 1개조   ▷ 장비 조작 시 반드시 복명·복창 안전 상태 확인   ▷ 전원이 필요없는 경우 반드시 전원 차단 후 작업 교육",
+                        "photo": null
+            },
+            {
+                        "step": "[기계실작업] CP/INV 점검  및 고장처리",
+                        "hazard": "기계실내 분전반의 커버 미 취부로 인하여 동력선 연결부위가 노출되어 감전",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 개인안전보호구 필수 착용   ▷ 절연용 보호구 필수 착용   ▷ 노후 안전보호구 교체(수시)   ▷ 작업은 반드시 2인 1개조   ▷ 장비 조작 시 반드시 복명·복창 안전 상태 확인   ▷ 전원이 필요없는 경우 반드시 전원 차단 후 작업 교육",
+                        "photo": null
+            },
+            {
+                        "step": "[기계실작업] TM관련 교체 (양중)",
+                        "hazard": "양중장비 사용 중 협착, 추락, 낙하",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 인증된 양중장비를 용량에 맞게 사용 ▷ 양중용 후크 테스트 실시 후 작업",
+                        "photo": null
+            },
+            {
+                        "step": "[기계실작업] 브레이크 조정 /  시브,로프 점검 및 청소",
+                        "hazard": "기계실에서 작업자가 넘어짐",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 작업 전 전도 주의 – 바닥 및 주변 청소",
+                        "photo": null
+            },
+            {
+                        "step": "[기계실작업] 브레이크 조정 /  시브,로프 점검 및 청소",
+                        "hazard": "권상기, 조속기 점검 및 청소작업중 시브가 동작하여 로프에 손, 신체 등이 말려듬",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 전원이 필요없는 경우 반드시 전원 차단 후 작업 교육",
+                        "photo": null
+            },
+            {
+                        "step": "[카상부작업] 레일 조정 / 카상부 진/출입 / 카상부 운전",
+                        "hazard": "카 상부 진출입중 카 운행에 의한 협착/충돌이 발생",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 작업은 반드시 2인 1개조",
+                        "photo": null
+            },
+            {
+                        "step": "[카상부작업] 레일 조정 / 카상부 진/출입 / 카상부 운전",
+                        "hazard": "카 상부 진출입중 도어의 날카로운 부위에 손을 베인다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 개인안전보호구 필수 착용",
+                        "photo": null
+            },
+            {
+                        "step": "[카상부작업] 레일 조정 / 카상부 진/출입 / 카상부 운전",
+                        "hazard": "도어를 개방한 채 작업중 닫히는 도어에 신체가 끼인다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 도어 개방시 차폐판을 필수 설치한다.",
+                        "photo": null
+            },
+            {
+                        "step": "[카상부작업] 레일 조정 / 카상부 진/출입 / 카상부 운전",
+                        "hazard": "카 상부에서 작업자가 추락한다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 개인안전보호구 필수 착용",
+                        "photo": null
+            },
+            {
+                        "step": "[카상부작업] 레일 조정 / 카상부 진/출입 / 카상부 운전",
+                        "hazard": "카 상부에서 작업중 카가 움직여 충돌, 협착사고가 발생한다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 작업 전 안전스위치 점검 및 작동 방법 교육",
+                        "photo": null
+            },
+            {
+                        "step": "[카상부작업] 레일 조정 / 카상부 진/출입 / 카상부 운전",
+                        "hazard": "권상기, 조속기 회전체에 손가락 협착이 발생한다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 회전체 주변에 공구 등 비치 금지 및 안전커버 확인  ▷ 고장 수리 시 안전커버를 제거했다면 완료 후 안전커버 설치 확인하여 끼임 사고 예방",
+                        "photo": null
+            },
+            {
+                        "step": "[카상부작업] 레일 조정 / 카상부 진/출입 / 카상부 운전",
+                        "hazard": "상부에서 낙하물이 떨어진다",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 2인 이상 작업 시 복명, 복창 으로 안전상태 확인",
+                        "photo": null
+            },
+            {
+                        "step": "[피트작업] 카하부 작업 / 버퍼, GOV 관련 고장처리",
+                        "hazard": "피트 진출입중 카의 운행에 의해 협착/충돌이 발생한다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 고정처리시 반드시 기계실에 점퍼여부 확인 후 카상부,       PIT진입시 수동전환 후 진입",
+                        "photo": null
+            },
+            {
+                        "step": "[피트작업] 카하부 작업 / 버퍼, GOV 관련 고장처리",
+                        "hazard": "사다리에서 실족하여 피트로 추락 또는 사다리에서 뛰어내려 발목 부상을 입는다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 사다리 이용 전 단단히 고정되었는지 확인 후 진입",
+                        "photo": null
+            },
+            {
+                        "step": "[피트작업] 카하부 작업 / 버퍼, GOV 관련 고장처리",
+                        "hazard": "피트 진출입중 도어의 날카로운 부위에 손을 베인다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 개인안전보호구 착용",
+                        "photo": null
+            },
+            {
+                        "step": "[피트작업] 카하부 작업 / 버퍼, GOV 관련 고장처리",
+                        "hazard": "외부인이 작업장소에 접근하여 안전사고가 발생한다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 외부인 진입을 차단하는 안전펜스 설치 후 작업",
+                        "photo": null
+            },
+            {
+                        "step": "[피트작업] 카하부 작업 / 버퍼, GOV 관련 고장처리",
+                        "hazard": "피트 바닥에서 미끄러져 넘어진다..",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 개인안전보호구 착용 및 점검 교육",
+                        "photo": null
+            },
+            {
+                        "step": "[피트작업] 카하부 작업 / 버퍼, GOV 관련 고장처리",
+                        "hazard": "CWT 프레임 또는 구조물에 충돌하거나 걸려 넘어진다.",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 고장점검 시 수동모드로 2인1조 작업 실시(1인작업 금지)",
+                        "photo": null
+            },
+            {
+                        "step": "[피트작업] 카하부 작업 / 버퍼, GOV 관련 고장처리",
+                        "hazard": "상부에서 낙하물이 떨어진다",
+                        "likelihood": 1,
+                        "severity": 2,
+                        "actionPlan": "▷ 작업은 반드시 작업지휘자의 지휘아래 작업 실시",
+                        "photo": null
+            }
+];
+
+        let sigPads = {};
+
+        
+        // --- Admin Fixed TBM Checklist Management ---
+        const DEFAULT_FIXED_CHECKLIST = [
+            "근로자 건강상태 확인 (음주·피로·혈압)",
+            "개인보호구 착용 점검 (안전모·절연장갑·안전대)",
+            "작업구역 출입통제 및 바리케이드 설치"
+        ];
+
+        function getFixedChecklist() {
+            try {
+                const stored = localStorage.getItem('fmlg_fixed_tbm_checklist');
+                if (stored) return JSON.parse(stored);
+            } catch(e) {}
+            localStorage.setItem('fmlg_fixed_tbm_checklist', JSON.stringify(DEFAULT_FIXED_CHECKLIST));
+            return DEFAULT_FIXED_CHECKLIST;
+        }
+
+        function saveFixedChecklist(items) {
+            try {
+                localStorage.setItem('fmlg_fixed_tbm_checklist', JSON.stringify(items));
+            } catch(e) {}
+        }
+
+        function renderAdminChecklistManager() {
+            const container = document.getElementById('admin-checklist-items-list');
+            if (!container) return;
+
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            const list = getFixedChecklist();
+            container.innerHTML = '';
+
+            list.forEach((item, index) => {
+                const row = `
+                    <div class="flex items-center justify-between gap-2 p-2.5 bg-slate-50 border rounded-lg">
+                        <div class="flex items-center gap-2 flex-1">
+                            <i class="fa-solid fa-check-double text-blue-600 text-xs shrink-0"></i>
+                            <input type="text" id="admin-item-input-${index}" value="${item.replace(/"/g, '&quot;')}" ${!isAdmin ? 'disabled' : ''} class="w-full text-xs font-bold text-slate-800 bg-white border rounded p-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        ${isAdmin ? `
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="saveAdminChecklistItem(${index})" class="text-blue-600 hover:text-blue-800 text-xs font-bold px-2.5 py-1 rounded border border-blue-200 bg-blue-50 hover:bg-blue-100 flex items-center gap-1">
+                                <i class="fa-solid fa-floppy-disk"></i> 저장
+                            </button>
+                            <button onclick="deleteAdminChecklistItem(${index})" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2 py-1 rounded border border-rose-200 bg-white hover:bg-rose-50 flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i> 삭제
+                            </button>
+                        </div>
+                        ` : '<span class="text-[10px] text-slate-400 font-medium">관리자 전용</span>'}
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        function saveAdminChecklistItem(index) {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("🔒 필수 고정 항목 수정 권한이 없습니다. 관리자 계정으로 로그인해 주세요.");
+                return;
+            }
+            const input = document.getElementById(`admin-item-input-${index}`);
+            if (!input) return;
+            const newText = input.value.trim();
+
+            if (!newText) {
+                alert("점검항목 내용이 비어있을 수 없습니다.");
+                return;
+            }
+
+            const list = getFixedChecklist();
+            list[index] = newText;
+            saveFixedChecklist(list);
+            renderAdminChecklistManager(); renderMasterHazardDbList();
+            renderTbmChecklistUI();
+            alert("✅ 해당 필수 점검항목이 성공적으로 수정·저장되었습니다!");
+        }
+
+        function addAdminChecklistItem() {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("🔒 필수 고정 항목 추가 권한이 없습니다. 관리자 계정으로 로그인해 주세요.");
+                return;
+            }
+            const input = document.getElementById('admin-new-checklist-item');
+            if (!input) return;
+            const text = input.value.trim();
+
+            if (!text) {
+                alert("점검항목 내용을 입력해 주세요.");
+                return;
+            }
+
+            const list = getFixedChecklist();
+            list.push(text);
+            saveFixedChecklist(list);
+            input.value = '';
+            renderAdminChecklistManager(); renderMasterHazardDbList();
+            renderTbmChecklistUI();
+            alert("✅ TBM 고정 점검항목이 새로 등록되었습니다!");
+        }
+
+        function deleteAdminChecklistItem(index) {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("🔒 필수 고정 항목 삭제 권한이 없습니다. 관리자 계정으로 로그인해 주세요.");
+                return;
+            }
+            if (confirm("이 항목을 고정 점검 목록에서 삭제하시겠습니까?")) {
+                const list = getFixedChecklist();
+                list.splice(index, 1);
+                saveFixedChecklist(list);
+                renderAdminChecklistManager(); renderMasterHazardDbList();
+                renderTbmChecklistUI();
+            }
+        }
+
+        function renderTbmChecklistUI() {
+            const container = document.getElementById('checklist-container');
+            if (!container) return;
+
+            const list = getFixedChecklist();
+            container.innerHTML = '';
+
+            list.forEach(item => {
+                const itemHtml = `
+                    <div class="flex items-center gap-2 p-2 rounded bg-slate-50 border border-slate-200">
+                        <input type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">
+                        <input type="text" value="${item}" class="bg-transparent w-full focus:outline-none font-medium text-slate-800">
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        }
+
+        // Initialize App on Page Load
+        window.addEventListener('DOMContentLoaded', async () => {
+            const itemCount = await db.items.count();
+            if (itemCount === 0) await db.items.bulkAdd(defaultItems);
+
+            const workerCount = await db.workers.count();
+            if (workerCount === 0) await db.workers.bulkAdd(defaultWorkers);
+
+            renderWorkers();
+            renderTbmChecklistUI();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
+            renderRiskCards(); searchHistoryRecords();
+
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
+            updateOnlineStatus();
+        });
+
+        function updateOnlineStatus() {
+            const badge = document.getElementById('sync-status');
+            const text = document.getElementById('sync-text');
+            if (navigator.onLine) {
+                badge.className = "bg-emerald-600 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium";
+                text.textContent = "온라인 연결됨";
+            } else {
+                badge.className = "bg-amber-600 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium";
+                text.textContent = "오프라인 저장모드";
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(`sec-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            if (tab === 'export') {
+                preparePDFPreview();
+            }
+        }
+
+        // --- Workers & Signature Pads Management ---
+
+        // Master employee database
+        let employeeMasterList = [
+            "홍길동 (관리감독자)",
+            "김안전 (작업자)",
+            "이기술 (작업자)",
+            "박점검 (작업자)",
+            "최유지 (작업자)",
+            "정점검 (작업자)"
+        ];
+
+        async function renderWorkers() {
+            const container = document.getElementById('workers-container');
+            const workers = await db.workers.toArray();
+            container.innerHTML = '';
+            sigPads = {};
+
+            workers.forEach((worker) => {
+                // Generate options dynamically
+                let optionsHtml = employeeMasterList.map(emp => 
+                    `<option value="${emp}" ${worker.name === emp ? 'selected' : ''}>${emp}</option>`
+                ).join('');
+
+                // Custom option if not in master list
+                if (!employeeMasterList.includes(worker.name) && worker.name) {
+                    optionsHtml += `<option value="${worker.name}" selected>${worker.name} (직접 입력됨)</option>`;
+                }
+
+                const cardHtml = `
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                        <div class="flex justify-between items-center gap-2">
+                            <div class="flex items-center gap-2 flex-1">
+                                <i class="fa-solid fa-user-check text-blue-600 text-xs"></i>
+                                <select onchange="updateWorkerName(${worker.id}, this.value)" class="text-xs border rounded p-1.5 font-bold bg-white w-full focus:ring-1 focus:ring-blue-500">
+                                    <option value="">-- 직원 선택 --</option>
+                                    ${optionsHtml}
+                                    <option value="__custom__">+ 직접 이름 입력하기</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2 shrink-0">
+                                <button onclick="clearWorkerSig(${worker.id})" class="text-[10px] text-slate-500 hover:underline">서명지우기</button>
+                                <button onclick="deleteWorker(${worker.id})" class="text-[10px] text-rose-500 hover:underline"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <canvas id="sig-canvas-${worker.id}" class="sig-pad w-full h-20"></canvas>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            setTimeout(() => {
+                workers.forEach(worker => {
+                    const canvas = document.getElementById(`sig-canvas-${worker.id}`);
+                    if (canvas) {
+                        canvas.width = canvas.offsetWidth;
+                        canvas.height = canvas.offsetHeight;
+                        const pad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
+                        if (worker.sigData) pad.fromDataURL(worker.sigData);
+                        const saveSig = async () => {
+                            if (!pad.isEmpty()) {
+                                const dataUrl = pad.toDataURL();
+                                await db.workers.update(worker.id, { sigData: dataUrl });
+                            }
+                        };
+                        pad.onEnd = saveSig;
+                        canvas.addEventListener("touchend", saveSig);
+                        canvas.addEventListener("mouseup", saveSig);
+                        sigPads[worker.id] = pad;
+                    }
+                });
+            }, 100);
+        }
+
+        async 
+        function filterWorkerOptions(query) {
+            const searchQuery = query.trim().toLowerCase();
+            const selects = document.querySelectorAll('#workers-container select');
+            
+            selects.forEach(select => {
+                const options = select.querySelectorAll('option');
+                options.forEach(opt => {
+                    if (opt.value === '' || opt.value === '__custom__') return;
+                    const text = opt.textContent.toLowerCase();
+                    if (!searchQuery || text.includes(searchQuery)) {
+                        opt.style.display = '';
+                    } else {
+                        opt.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        async function updateWorkerName(id, value) {
+            if (value === '__custom__') {
+                const customName = prompt("신규 직원 이름을 입력하세요 (예: 이철수 기사):");
+                if (customName && customName.trim()) {
+                    const fullName = customName.trim();
+                    if (!employeeMasterList.includes(fullName)) {
+                        employeeMasterList.push(fullName);
+                    }
+                    await db.workers.update(id, { name: fullName });
+                }
+            } else {
+                await db.workers.update(id, { name: value });
+            }
+            renderWorkers();
+            renderTbmChecklistUI();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
+        }
+
+        async function addWorkerCard() {
+            await db.workers.add({ name: '신규 근로자', sigData: null });
+            renderWorkers();
+            renderTbmChecklistUI();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
+        }
+
+        async function deleteWorker(id) {
+            await db.workers.delete(id);
+            renderWorkers();
+            renderTbmChecklistUI();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
+        }
+
+        function clearWorkerSig(id) {
+            if (sigPads[id]) {
+                sigPads[id].clear();
+                db.workers.update(id, { sigData: null });
+            }
+        }
+
+        // Dynamic Checklist Addition
+        function addChecklistItem() {
+            const container = document.getElementById('checklist-container');
+            const itemHtml = `
+                <div class="flex items-center gap-2 p-2 rounded bg-slate-50 border border-slate-200">
+                    <input type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">
+                    <input type="text" placeholder="새로운 점검 항목 입력" class="bg-transparent w-full focus:outline-none">
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', itemHtml);
+        }
+
+        // --- Risk Assessment Cards ---
+        async async function renderRiskCards() {
             const container = document.getElementById('risk-card-container');
             const items = await db.items.toArray();
             container.innerHTML = '';

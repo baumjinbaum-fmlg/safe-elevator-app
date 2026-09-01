@@ -138,23 +138,26 @@
         
         <!-- Tab Bar -->
         <nav class="flex bg-slate-800 text-slate-300 text-xs border-t border-slate-700 overflow-x-auto">
-            <button onclick="switchTab('tbm')" id="tab-tbm" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn active flex-1 py-2 text-center min-w-[60px] transition">
+            <button onclick="switchTab('tbm')" id="tab-tbm" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn active flex-1 py-2 text-center min-w-[55px] transition shrink-0">
                 <i class="fa-solid fa-users-gear block text-sm mb-0.5"></i> 1. TBM
             </button>
-            <button onclick="switchTab('kras')" id="tab-kras" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[60px] transition">
+            <button onclick="switchTab('kras')" id="tab-kras" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
                 <i class="fa-solid fa-clipboard-check block text-sm mb-0.5"></i> 2. 위험성
             </button>
-            <button onclick="switchTab('export')" id="tab-export" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[60px] transition">
+            <button onclick="switchTab('export')" id="tab-export" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
                 <i class="fa-solid fa-file-pdf block text-sm mb-0.5"></i> 3. 보고서
             </button>
-            <button onclick="switchTab('search')" id="tab-search" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[60px] transition">
+            <button onclick="switchTab('search')" id="tab-search" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
                 <i class="fa-solid fa-magnifying-glass block text-sm mb-0.5"></i> 4. 이력조회
             </button>
-            <button onclick="switchTab('admin')" id="tab-admin" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[60px] transition">
-                <i class="fa-solid fa-user-shield block text-sm mb-0.5"></i> 5. 승인
+            <button onclick="switchTab('master')" id="tab-master" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[65px] transition shrink-0">
+                <i class="fa-solid fa-sliders block text-sm mb-0.5 text-amber-400"></i> 5. 고정항목
             </button>
-            <button onclick="switchTab('profile')" id="tab-profile" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[60px] transition">
-                <i class="fa-solid fa-id-card block text-sm mb-0.5"></i> 6. 내 정보
+            <button onclick="switchTab('admin')" id="tab-admin" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[65px] transition shrink-0">
+                <i class="fa-solid fa-users-gear block text-sm mb-0.5 text-blue-400"></i> 6. 회원관리
+            </button>
+            <button onclick="switchTab('profile')" id="tab-profile" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
+                <i class="fa-solid fa-id-card block text-sm mb-0.5"></i> 7. 내 정보
             </button>
         </nav>
 
@@ -293,6 +296,12 @@
                             </button>
                         </div>
 
+                        <!-- Worker Quick Search Box -->
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input type="text" id="worker-search-filter" oninput="filterWorkerOptions(this.value)" placeholder="🔍 근로자 이름 검색 (예: 홍길동, 김안전)" class="w-full text-xs pl-8 pr-3 py-2 border rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none font-medium">
+                        </div>
+
                         <div id="workers-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                             <!-- Worker cards rendered dynamically -->
                         </div>
@@ -316,18 +325,36 @@
 
         <!-- TAB 2: KRAS Risk Assessment -->
         <section id="sec-kras" class="space-y-4 hidden">
-            <div class="flex justify-between items-center">
-                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> KRAS 3x3 유해·위험요인
-                </h2>
-                <button onclick="addAssessmentCard()" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1 font-medium shadow-sm">
-                    <i class="fa-solid fa-plus"></i> 항목 추가
-                </button>
+            <div class="flex flex-wrap justify-between items-center gap-2 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> KRAS 3x3 유해·위험요인 평가작성
+                    </h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">현장 위험요인을 등록 및 평가하고 저장 버튼을 눌러 확정하세요.</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="addAssessmentCard()" style="-webkit-tap-highlight-color: transparent; cursor: pointer;" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1 font-bold shadow-sm">
+                        <i class="fa-solid fa-plus"></i> 항목 추가
+                    </button>
+                    <button onclick="saveDataOffline()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 font-bold shadow-sm">
+                        <i class="fa-solid fa-floppy-disk text-amber-400"></i> 위험성평가 저장
+                    </button>
+                </div>
             </div>
 
             <!-- Risk Items List Container -->
             <div id="risk-card-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Assessment cards rendered dynamically via JS -->
+            </div>
+
+            <!-- Bottom Floating Save Bar for Risk Assessment -->
+            <div class="pt-2 grid grid-cols-3 gap-2">
+                <button onclick="saveDataOffline()" class="col-span-2 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md">
+                    <i class="fa-solid fa-floppy-disk text-amber-400 text-sm"></i> 위험성평가 저장 및 이력 등록
+                </button>
+                <button onclick="switchTab('export'); generateRiskPDF();" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow-md">
+                    <i class="fa-solid fa-file-pdf"></i> PDF 다운
+                </button>
             </div>
         </section>
 
@@ -569,8 +596,135 @@
             </div>
         </section>
 
-        <!-- TAB 5: Admin Management (승인 및 공지사항 관리) -->
+        <!-- TAB 5: Fixed Master Data Management (고정항목 관리: TBM & 위험성평가) -->
+        <section id="sec-master" class="space-y-4 hidden">
+            <!-- Header Banner -->
+            <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="font-bold text-sm flex items-center gap-1.5 text-amber-400">
+                        <i class="fa-solid fa-sliders"></i> TBM & 위험성평가 고정 항목 통합 관리센터
+                    </h2>
+                    <p class="text-xs text-slate-300 mt-1">현장에서 공통으로 사용하는 TBM 필수 점검항목과 위험성평가 표준 DB를 직접 관리합니다.</p>
+                </div>
+                <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-1 rounded font-bold">관리자 전용</span>
+            </div>
+
+            <!-- 1. TBM Fixed Checklist Management Card -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-check text-blue-600"></i> 1. TBM 필수 고정 점검항목 설정
+                    </h3>
+                    <span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">TBM 전용</span>
+                </div>
+                <p class="text-xs text-slate-500">모든 점검 현장의 TBM 체크리스트에 기본 표기되는 고정 필수 점검항목입니다.</p>
+
+                <!-- Checklist Add Form -->
+                <div class="flex gap-2 text-xs pt-1">
+                    <input type="text" id="admin-new-checklist-item" placeholder="새로운 필수 점검항목 입력 (예: 작업전 안전스위치 작동 상태 확인)" class="flex-1 border rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none">
+                    <button onclick="addAdminChecklistItem()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-lg shrink-0 shadow-sm flex items-center gap-1">
+                        <i class="fa-solid fa-plus"></i> 항목 추가
+                    </button>
+                </div>
+
+                <!-- Fixed Checklist Items List -->
+                <div id="admin-checklist-items-list" class="space-y-2 pt-2 text-xs">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- 2. KRAS Risk Assessment Fixed Database Manager -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-database text-amber-500"></i> 2. KRAS 위험성평가 표준 고정 데이터베이스(DB) 관리
+                    </h3>
+                    <span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">KRAS 전용</span>
+                </div>
+                <p class="text-xs text-slate-500">2단계 [위험성] 탭의 드롭다운 선택 메뉴에 반영되는 표준 유해위험요인과 개선대책 문구를 수정/등록합니다.</p>
+
+                <!-- Add New Hazard DB Item Form -->
+                <div class="bg-amber-50/60 p-3 rounded-xl border border-amber-200 space-y-2 text-xs">
+                    <span class="font-bold text-amber-900 block"><i class="fa-solid fa-plus-circle text-amber-600"></i> 신규 표준 유해위험요인 등록</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-slate-600 mb-1 font-bold">구분 (대분류)</label>
+                            <select id="new-hazard-major" class="w-full border rounded-lg p-2 bg-white font-bold">
+                                <option value="[기계실작업]">[기계실작업]</option>
+                                <option value="[카상부작업]">[카상부작업]</option>
+                                <option value="[피트작업]">[피트작업]</option>
+                                <option value="[기타작업]">[기타작업]</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1 font-bold">세부 공정명 (소분류)</label>
+                            <input type="text" id="new-hazard-sub" placeholder="예: 조속기 교체 및 시험" class="w-full border rounded-lg p-2 bg-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-slate-600 mb-1 font-bold">유해·위험요인 (Hazard)</label>
+                        <input type="text" id="new-hazard-text" placeholder="예: 조속기 로프 장착 중 손가락 협착 및 끼임 발생" class="w-full border rounded-lg p-2 bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-slate-600 mb-1 font-bold">개선 및 감소대책 (Action Plan)</label>
+                        <textarea id="new-hazard-action" placeholder="예: ▷ 2인 1조 수동운전 실시 ▷ 안전장갑 착용 ▷ 복명복창" class="w-full border rounded-lg p-2 bg-white h-16"></textarea>
+                    </div>
+                    <button onclick="addCustomHazardDbItem()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg shadow-sm flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-floppy-disk"></i> 위험성평가 고정 DB 항목으로 추가 저장
+                    </button>
+                </div>
+
+                <!-- Fixed Hazard DB Items List -->
+                <div id="master-hazard-db-list" class="space-y-3 pt-2 text-xs">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 6: Member Management Center (독립된 회원관리 & 승인일자 & 직원 검색 탭) -->
         <section id="sec-admin" class="space-y-4 hidden">
+            <!-- Header Banner -->
+            <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="font-bold text-sm flex items-center gap-1.5 text-blue-400">
+                        <i class="fa-solid fa-users-gear"></i> 사내 임직원 회원 관리 센터
+                    </h2>
+                    <p class="text-xs text-slate-300 mt-1">직원 조회, 가입 승인, 승인일자 기록 및 회원 권한/상태를 관리합니다.</p>
+                </div>
+                <span class="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-1 rounded font-bold">관리자 전용</span>
+            </div>
+
+            <!-- User Search & Filter Card -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-magnifying-glass text-blue-600"></i> 직원 검색 및 회원목록 필터
+                    </h3>
+                    <span id="user-count-badge" class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">총 0명</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold">직원 이름 / 아이디 / 부서 검색</label>
+                        <input type="text" id="user-search-query" oninput="renderAdminUserList()" placeholder="예: 홍길동, user@fmlg.co.kr, 유지관리팀" class="w-full border rounded-lg p-2 bg-slate-50 focus:bg-white focus:outline-none font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold">승인 상태 필터</label>
+                        <select id="user-status-filter" onchange="renderAdminUserList()" class="w-full border rounded-lg p-2 bg-slate-50 font-bold text-slate-800 focus:bg-white focus:outline-none">
+                            <option value="all">전체 회원 보기</option>
+                            <option value="approved">승인 완료 회원</option>
+                            <option value="pending">⏳ 가입 승인 대기중</option>
+                            <option value="retired">⛔ 퇴사자 (차단 계정)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- User Cards List Container -->
+                <div class="space-y-2 pt-2" id="admin-user-list">
+                    <!-- Approved and Pending Users Rendered Dynamically -->
+                </div>
+            </div>
+
             <!-- Notice Management Card (Admin Only) -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
                 <div class="flex justify-between items-center border-b pb-2">
@@ -593,45 +747,6 @@
                     <button onclick="saveNoticeSettings()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl shadow-sm flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-floppy-disk"></i> 공지사항 즉시 등록 및 적용
                     </button>
-                </div>
-            </div>
-
-            <!-- TBM Fixed Checklist Management Card (Admin Only) -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <div class="flex justify-between items-center border-b pb-2">
-                    <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                        <i class="fa-solid fa-list-check text-blue-600"></i> TBM 필수 고정 점검항목 관리
-                    </h2>
-                    <span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">관리자 전용</span>
-                </div>
-                <p class="text-xs text-slate-500">모든 작업 현장의 TBM에 기본 적용되는 고정 필수 점검항목을 추가/삭제합니다.</p>
-
-                <!-- Checklist Edit Input -->
-                <div class="flex gap-2 text-xs pt-1">
-                    <input type="text" id="admin-new-checklist-item" placeholder="새로운 필수 점검항목 입력 (예: 작업전 안전스위치 작동 상태 확인)" class="flex-1 border rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none">
-                    <button onclick="addAdminChecklistItem()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-lg shrink-0 shadow-sm flex items-center gap-1">
-                        <i class="fa-solid fa-plus"></i> 항목 추가
-                    </button>
-                </div>
-
-                <!-- Fixed Checklist Items List -->
-                <div id="admin-checklist-items-list" class="space-y-2 pt-2 text-xs">
-                    <!-- Loaded dynamically -->
-                </div>
-            </div>
-
-            <!-- User Approval Card -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <div class="flex justify-between items-center border-b pb-2">
-                    <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                        <i class="fa-solid fa-user-check text-blue-600"></i> 사내 회원가입 가입 승인 센터
-                    </h2>
-                    <span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">관리자 전용</span>
-                </div>
-                <p class="text-xs text-slate-500">우리 회사 직원만 시스템을 이용할 수 있도록 신규 가입 신청을 승인/거절합니다.</p>
-
-                <div class="space-y-2 pt-2" id="admin-user-list">
-                    <!-- Approved and Pending Users Rendered Dynamically -->
                 </div>
             </div>
         </section>
@@ -684,8 +799,8 @@
         
         // --- 0. Complete Auth System Overhaul (100% Fixed & Tested) ---
         const DEFAULT_USERS = [
-            { username: 'admin@fmlg.co.kr', password: '123', name: '관리자 (홍길동)', dept: '안전관리부', status: 'approved', role: 'admin' },
-            { username: 'kim@fmlg.co.kr', password: '123', name: '김안전 (작업자)', dept: '유지관리1팀', status: 'approved', role: 'user' }
+            { username: 'admin@fmlg.co.kr', password: '123', name: '관리자 (홍길동)', dept: '안전관리부', status: 'approved', role: 'admin', createdAt: '2026-08-01 09:00', approvedAt: '2026-08-01 09:00' },
+            { username: 'kim@fmlg.co.kr', password: '123', name: '김안전 (작업자)', dept: '유지관리1팀', status: 'approved', role: 'user', createdAt: '2026-08-05 10:30', approvedAt: '2026-08-05 11:00' }
         ];
 
         function getUsersList() {
@@ -927,13 +1042,16 @@
                 return;
             }
 
+            const todayStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
             const newUser = {
                 username: id,
                 password: pw,
                 name: name,
                 dept: dept,
                 status: 'pending',
-                role: 'user'
+                role: 'user',
+                createdAt: todayStr,
+                approvedAt: null
             };
 
             users.push(newUser);
@@ -956,22 +1074,165 @@
             }
         }
 
+        
+        // --- Dynamic Master Hazard DB Manager ---
+        function getMasterHazardDb() {
+            try {
+                const stored = localStorage.getItem('fmlg_master_hazard_db');
+                if (stored) return JSON.parse(stored);
+            } catch(e) {}
+            localStorage.setItem('fmlg_master_hazard_db', JSON.stringify(CATEGORY_HAZARD_DB));
+            return CATEGORY_HAZARD_DB;
+        }
+
+        function saveMasterHazardDb(dbObj) {
+            try {
+                localStorage.setItem('fmlg_master_hazard_db', JSON.stringify(dbObj));
+            } catch(e) {}
+        }
+
+        function renderMasterHazardDbList() {
+            const container = document.getElementById('master-hazard-db-list');
+            if (!container) return;
+
+            const dbObj = getMasterHazardDb();
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            container.innerHTML = '';
+
+            for (let majorCat in dbObj) {
+                const items = dbObj[majorCat] || [];
+                let itemsHtml = '';
+
+                items.forEach((item, index) => {
+                    itemsHtml += `
+                        <div class="p-2.5 bg-white border rounded-lg space-y-1.5 text-xs">
+                            <div class="flex justify-between items-center gap-2">
+                                <span class="font-bold text-slate-800 flex items-center gap-1">
+                                    <i class="fa-solid fa-caret-right text-amber-500"></i>
+                                    ${item.sub}
+                                </span>
+                                ${isAdmin ? `
+                                <button onclick="deleteMasterHazardDbItem('${majorCat}', ${index})" class="text-rose-600 hover:text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded border border-rose-200 bg-rose-50">
+                                    삭제
+                                </button>
+                                ` : ''}
+                            </div>
+                            <div class="text-[11px] text-slate-600 bg-slate-50 p-1.5 rounded border"><b>위험요인:</b> ${item.hazard}</div>
+                            <div class="text-[11px] text-emerald-800 bg-emerald-50/60 p-1.5 rounded border border-emerald-100"><b>개선대책:</b> ${item.action}</div>
+                        </div>
+                    `;
+                });
+
+                const groupHtml = `
+                    <div class="border rounded-xl p-3 bg-slate-50 space-y-2">
+                        <div class="flex justify-between items-center border-b pb-1.5">
+                            <span class="font-bold text-slate-800 text-xs text-blue-900">${majorCat} (${items.length}개 항목)</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${itemsHtml || '<div class="text-slate-400 text-xs p-2">등록된 항목이 없습니다.</div>'}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', groupHtml);
+            }
+        }
+
+        function addCustomHazardDbItem() {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("🔒 고정 DB 등록 권한이 없습니다. 관리자 계정으로 로그인해 주세요.");
+                return;
+            }
+
+            const major = document.getElementById('new-hazard-major').value;
+            const sub = document.getElementById('new-hazard-sub').value.trim();
+            const hazard = document.getElementById('new-hazard-text').value.trim();
+            const action = document.getElementById('new-hazard-action').value.trim();
+
+            if (!sub || !hazard) {
+                alert("세부 공정명과 유해·위험요인을 모두 입력해 주세요.");
+                return;
+            }
+
+            const dbObj = getMasterHazardDb();
+            if (!dbObj[major]) dbObj[major] = [];
+
+            dbObj[major].push({
+                sub: sub,
+                hazard: hazard,
+                action: action || "▷ 개인안전보호구 필수 착용 ▷ 2인 1조 작업 실시"
+            });
+
+            saveMasterHazardDb(dbObj);
+            document.getElementById('new-hazard-sub').value = '';
+            document.getElementById('new-hazard-text').value = '';
+            document.getElementById('new-hazard-action').value = '';
+
+            renderMasterHazardDbList();
+            renderRiskCards();
+            alert(`✅ [${major}] 항목에 새로운 위험성평가 표준 DB가 등록되었습니다!`);
+        }
+
+        function deleteMasterHazardDbItem(majorCat, index) {
+            if (!currentUser || currentUser.role !== 'admin') {
+                alert("🔒 고정 DB 삭제 권한이 없습니다. 관리자 계정으로 로그인해 주세요.");
+                return;
+            }
+
+            if (confirm(`[${majorCat}] 해당 표준 항목을 삭제하시겠습니까?`)) {
+                const dbObj = getMasterHazardDb();
+                if (dbObj[majorCat]) {
+                    dbObj[majorCat].splice(index, 1);
+                    saveMasterHazardDb(dbObj);
+                    renderMasterHazardDbList();
+                    renderRiskCards();
+                }
+            }
+        }
+
         function updateMasterEmployeeList() {
             const users = getUsersList();
             employeeMasterList = users.map(u => u.name + " (" + u.dept + ")");
             if (typeof renderWorkers === 'function') renderWorkers();
             renderTbmChecklistUI();
-            renderAdminChecklistManager();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
             if (typeof renderAdminUserList === 'function') renderAdminUserList();
         }
 
         function renderAdminUserList() {
             const container = document.getElementById('admin-user-list');
             if (!container) return;
+
+            const searchQuery = document.getElementById('user-search-query') ? document.getElementById('user-search-query').value.trim().toLowerCase() : '';
+            const statusFilter = document.getElementById('user-status-filter') ? document.getElementById('user-status-filter').value : 'all';
+
             const users = getUsersList();
+
+            // Filter users
+            const filteredUsers = users.filter(u => {
+                let matchQuery = !searchQuery || 
+                    (u.name && u.name.toLowerCase().includes(searchQuery)) ||
+                    (u.username && u.username.toLowerCase().includes(searchQuery)) ||
+                    (u.dept && u.dept.toLowerCase().includes(searchQuery));
+
+                let matchStatus = true;
+                if (statusFilter === 'approved') matchStatus = u.status === 'approved';
+                else if (statusFilter === 'pending') matchStatus = u.status === 'pending';
+                else if (statusFilter === 'retired') matchStatus = u.status === 'retired';
+
+                return matchQuery && matchStatus;
+            });
+
+            const countBadge = document.getElementById('user-count-badge');
+            if (countBadge) countBadge.textContent = `총 ${filteredUsers.length}명 / 전체 ${users.length}명`;
+
             container.innerHTML = '';
 
-            users.forEach((u) => {
+            if (filteredUsers.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-lg border">검색 결과에 일치하는 직원이 없습니다.</div>`;
+                return;
+            }
+
+            filteredUsers.forEach((u) => {
                 const isApproved = u.status === 'approved';
                 const isRetired = u.status === 'retired';
                 const isAdmin = u.role === 'admin';
@@ -991,6 +1252,9 @@
                     ? '<span class="text-[9px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded">관리자</span>' 
                     : '<span class="text-[9px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded">작업자</span>';
 
+                const approvedDateStr = u.approvedAt ? u.approvedAt : (isApproved ? '기본 승인됨' : '미승인');
+                const createdDateStr = u.createdAt ? u.createdAt : '-';
+
                 const row = `<div class="p-3 border rounded-lg bg-slate-50 space-y-2 text-xs">
                     <div class="flex justify-between items-start">
                         <div>
@@ -1000,13 +1264,17 @@
                                 <span class="text-[10px] text-slate-500">(${u.dept})</span>
                             </div>
                             <div class="text-[10px] text-slate-400 mt-0.5">${u.username}</div>
-                            <span class="inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded ${badgeClass}">${statusText}</span>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="inline-block text-[9px] px-1.5 py-0.5 rounded ${badgeClass}">${statusText}</span>
+                                <span class="text-[10px] text-slate-500 font-medium">📅 승인일자: <b>${approvedDateStr}</b></span>
+                                <span class="text-[10px] text-slate-400">(신청일: ${createdDateStr})</span>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Actions Bar -->
                     <div class="flex flex-wrap gap-1.5 pt-2 border-t text-[10px]">
-                        ${!isApproved && !isRetired ? `<button onclick="approveUser('${u.username}')" class="bg-blue-600 text-white font-bold px-2.5 py-1 rounded">가입 승인</button>` : ''}
+                        ${!isApproved && !isRetired ? `<button onclick="approveUser('${u.username}')" class="bg-blue-600 text-white font-bold px-2.5 py-1 rounded shadow-sm"><i class="fa-solid fa-check mr-1"></i>가입 승인</button>` : ''}
                         
                         <!-- Role Toggle -->
                         <button onclick="toggleUserRole('${u.username}')" class="bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold px-2 py-1 rounded">
@@ -1032,8 +1300,9 @@
             const target = users.find(u => u.username === username);
             if (target) {
                 target.status = 'approved';
+                target.approvedAt = new Date().toISOString().replace('T', ' ').substring(0, 16);
                 saveUsersList(users);
-                alert("✅ " + target.name + "님의 회원가입이 승인되었습니다!");
+                alert("✅ " + target.name + "님의 회원가입이 승인되었습니다! (승인일시: " + target.approvedAt + ")");
                 updateMasterEmployeeList();
             }
         }
@@ -1089,16 +1358,24 @@
         
         const CATEGORY_HAZARD_DB = {
             "[기계실작업]": [
-                { sub: "CP/INV 점검 및 고장처리", hazard: "제어반 고장 처리 및 점검 시 부주의로 인한 쇼트, 감전", action: "▷ 개인안전보호구 필수 착용 ▷ 절연용 보호구 필수 착용 ▷ 2인 1조 작업 ▷ 복명복창 실시" },
-                { sub: "TM관련 교체 (양중)", hazard: "양중장비 사용 중 협착, 추락, 낙하", action: "▷ 인증된 양중장비를 용량에 맞게 사용 ▷ 양중용 후크 테스트 실시 후 작업" },
-                { sub: "브레이크 조정 / 시브,로프 점검 및 청소", hazard: "권상기, 조속기 점검 및 청소작업중 시브가 동작하여 로프에 손, 신체 등이 말려듬", action: "▷ 전원이 필요없는 경우 반드시 전원 차단 후 작업 교육" }
+                { sub: "CP/INV 점검 및 고장처리", hazard: "제어반 고장 처리 및 점검 시 부주의로 인한 쇼트, 감전", action: "▷ 절연장갑 및 개인안전보호구 필수 착용 ▷ 2인 1조 작업 원칙 준수 ▷ 수동 전환 후 작업 ▷ 전원 차단 확인" },
+                { sub: "CP/INV 점검 및 고장처리", hazard: "기계실 내 분전반 커버 미취부로 인한 동력선 노출 감전", action: "▷ 분전반 커버 상태 확인 및 전원 차단 후 점검 ▷ 절연 보호구 착용" },
+                { sub: "TM관련 교체 (양중)", hazard: "양중장비 사용 중 협착, 추락, 낙하", action: "▷ 인증 양중장비 사용 ▷ 양중용 후크 테스트 실시 ▷ 작업구역 하부 출입통제" },
+                { sub: "브레이크 조정 / 시브,로프 점검", hazard: "기계실 바닥 정리 미흡으로 인한 작업자 전도(넘어짐)", action: "▷ 작업 전 바닥 및 주변 정리정돈 ▷ 통로 확보" },
+                { sub: "브레이크 조정 / 시브,로프 점검", hazard: "권상기·조속기 점검 중 시브 동작으로 손·신체 말림", action: "▷ 전원 차단 후 작업 ▷ 회전부 보호커버 설치 확인 ▷ 복명복창" }
             ],
             "[카상부작업]": [
-                { sub: "레일 조정 / 카상부 진/출입 / 카상부 운전", hazard: "카 상부 진출입중 카 운행에 의한 협착/충돌이 발생", action: "▷ 작업은 반드시 2인 1개조 ▷ 안전스위치 작동 확인" },
-                { sub: "도어 관련 점검", hazard: "도어를 개방한 채 작업중 닫히는 도어에 신체가 끼인다.", action: "▷ 도어 개방시 차폐판 필수 설치 ▷ 개인안전보호구 착용" }
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "카 상부 진출입 중 카 운행에 의한 협착 및 충돌", action: "▷ 2인 1조 작업 ▷ 진입 전 안전스위치 작동 확인 ▷ 비상정지 스위치 테스트" },
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "도어 개방 작업 중 날카로운 부위에 베임", action: "▷ 안전장갑 필수 착용 ▷ 베임 방지 보호구 착용" },
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "도어 개방 상태 작업 중 닫히는 도어에 신체 끼임", action: "▷ 도어 차폐판 필수 설치 ▷ 도어 전원 차단 후 고정" },
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "카 상부 작업 중 작업자 추락", action: "▷ 안전대 착용 및 체결 ▷ 카 상부 난간대 상태 점검" },
+                { sub: "레일 조정 / 카상부 진출입 / 운전", hazard: "상부 작업 중 공구 및 자재 낙하", action: "▷ 공구 낙하방지 끈(줄) 사용 ▷ 하부 출입통제 바리케이드 설치" }
             ],
             "[피트작업]": [
-                { sub: "카하부 작업 / 버퍼, GOV 관련 고장처리", hazard: "피트 진출입중 카의 운행에 의해 협착/충돌이 발생한다.", action: "▷ 수동전환 후 진입 ▷ 사다리 이용 전 단단히 고정되었는지 확인" }
+                { sub: "카하부 작업 / 버퍼, GOV 점검", hazard: "피트 진출입 중 카 운행에 의한 협착 및 충돌", action: "▷ 수동모드 전환 후 진입 ▷ 점퍼선 여부 확인 ▷ 피트 안전스위치 작동" },
+                { sub: "카하부 작업 / 버퍼, GOV 점검", hazard: "사다리 이용 중 실족 추락 및 미끄러짐", action: "▷ 사다리 상·하부 고정 상태 확인 ▷ 2인 1조 상부 잡이조 작업" },
+                { sub: "카하부 작업 / 버퍼, GOV 점검", hazard: "피트 바닥 미끄러짐 및 넘어짐", action: "▷ 안전화 착용 ▷ 피트 바닥 유수 및 오일 제거" },
+                { sub: "카하부 작업 / 버퍼, GOV 점검", hazard: "외부인 작업장소 접근에 따른 안전사고", action: "▷ 승강장 안전펜스 및 바리케이드 설치 ▷ 안내표지판 게시" }
             ]
         };
 
@@ -1417,7 +1694,7 @@
             const list = getFixedChecklist();
             list[index] = newText;
             saveFixedChecklist(list);
-            renderAdminChecklistManager();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
             renderTbmChecklistUI();
             alert("✅ 해당 필수 점검항목이 성공적으로 수정·저장되었습니다!");
         }
@@ -1440,7 +1717,7 @@
             list.push(text);
             saveFixedChecklist(list);
             input.value = '';
-            renderAdminChecklistManager();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
             renderTbmChecklistUI();
             alert("✅ TBM 고정 점검항목이 새로 등록되었습니다!");
         }
@@ -1454,7 +1731,7 @@
                 const list = getFixedChecklist();
                 list.splice(index, 1);
                 saveFixedChecklist(list);
-                renderAdminChecklistManager();
+                renderAdminChecklistManager(); renderMasterHazardDbList();
                 renderTbmChecklistUI();
             }
         }
@@ -1487,7 +1764,7 @@
 
             renderWorkers();
             renderTbmChecklistUI();
-            renderAdminChecklistManager();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
             renderRiskCards(); searchHistoryRecords();
 
             window.addEventListener('online', updateOnlineStatus);
@@ -1578,16 +1855,41 @@
                         canvas.height = canvas.offsetHeight;
                         const pad = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)' });
                         if (worker.sigData) pad.fromDataURL(worker.sigData);
-                        pad.addEventListener("afterUpdate", async () => {
-                            await db.workers.update(worker.id, { sigData: pad.toDataURL() });
-                        });
+                        const saveSig = async () => {
+                            if (!pad.isEmpty()) {
+                                const dataUrl = pad.toDataURL();
+                                await db.workers.update(worker.id, { sigData: dataUrl });
+                            }
+                        };
+                        pad.onEnd = saveSig;
+                        canvas.addEventListener("touchend", saveSig);
+                        canvas.addEventListener("mouseup", saveSig);
                         sigPads[worker.id] = pad;
                     }
                 });
             }, 100);
         }
 
-        async function updateWorkerName(id, value) {
+        async 
+        function filterWorkerOptions(query) {
+            const searchQuery = query.trim().toLowerCase();
+            const selects = document.querySelectorAll('#workers-container select');
+            
+            selects.forEach(select => {
+                const options = select.querySelectorAll('option');
+                options.forEach(opt => {
+                    if (opt.value === '' || opt.value === '__custom__') return;
+                    const text = opt.textContent.toLowerCase();
+                    if (!searchQuery || text.includes(searchQuery)) {
+                        opt.style.display = '';
+                    } else {
+                        opt.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        function updateWorkerName(id, value) {
             if (value === '__custom__') {
                 const customName = prompt("신규 직원 이름을 입력하세요 (예: 이철수 기사):");
                 if (customName && customName.trim()) {
@@ -1602,21 +1904,21 @@
             }
             renderWorkers();
             renderTbmChecklistUI();
-            renderAdminChecklistManager();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
         }
 
         async function addWorkerCard() {
             await db.workers.add({ name: '신규 근로자', sigData: null });
             renderWorkers();
             renderTbmChecklistUI();
-            renderAdminChecklistManager();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
         }
 
         async function deleteWorker(id) {
             await db.workers.delete(id);
             renderWorkers();
             renderTbmChecklistUI();
-            renderAdminChecklistManager();
+            renderAdminChecklistManager(); renderMasterHazardDbList();
         }
 
         function clearWorkerSig(id) {
@@ -1658,7 +1960,8 @@
 
                 // Match Category
                 let currentMajorCat = "";
-                for (let cat in CATEGORY_HAZARD_DB) {
+                const activeDb = getMasterHazardDb();
+                for (let cat in activeDb) {
                     if (item.step.includes(cat) || item.step.startsWith(cat)) {
                         currentMajorCat = cat;
                         break;
@@ -1667,14 +1970,17 @@
 
                 // Major Category Select Options
                 let majorOptions = '<option value="">-- [1단계] 대분류 선택 --</option>';
-                for (let cat in CATEGORY_HAZARD_DB) {
+                const activeDb = getMasterHazardDb();
+                for (let cat in activeDb) {
                     majorOptions += `<option value="${cat}" ${currentMajorCat === cat ? 'selected' : ''}>${cat}</option>`;
                 }
 
                 // Sub Category Select Options
                 let subOptions = '<option value="">-- [2단계] 소분류/유해요인 표준항목 선택 --</option>';
-                if (currentMajorCat && CATEGORY_HAZARD_DB[currentMajorCat]) {
-                    CATEGORY_HAZARD_DB[currentMajorCat].forEach((subObj, idx) => {
+                const activeDb = getMasterHazardDb();
+                if (currentMajorCat && activeDb[currentMajorCat]) {
+                    const activeDb = getMasterHazardDb();
+                    activeDb[currentMajorCat].forEach((subObj, idx) => {
                         const isSelected = item.hazard.includes(subObj.sub) || item.hazard === subObj.hazard;
                         subOptions += `<option value="${idx}" ${isSelected ? 'selected' : ''}>${subObj.sub}</option>`;
                     });
@@ -1769,8 +2075,9 @@
         }
 
         async function onSubCatChange(itemId, majorCat, subIdx) {
-            if (subIdx === "" || !majorCat || !CATEGORY_HAZARD_DB[majorCat]) return;
-            const subObj = CATEGORY_HAZARD_DB[majorCat][parseInt(subIdx)];
+            const activeDb = getMasterHazardDb();
+            if (subIdx === "" || !majorCat || !activeDb[majorCat]) return;
+            const subObj = activeDb[majorCat][parseInt(subIdx)];
             if (!subObj) return;
 
             await db.items.update(itemId, {

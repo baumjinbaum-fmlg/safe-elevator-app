@@ -1941,7 +1941,7 @@
         }
 
         // --- Risk Assessment Cards ---
-        async async function renderRiskCards() {
+        async function renderRiskCards() {
             const container = document.getElementById('risk-card-container');
             const items = await db.items.toArray();
             container.innerHTML = '';

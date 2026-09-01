@@ -1889,7 +1889,7 @@
             });
         }
 
-        function updateWorkerName(id, value) {
+        async function updateWorkerName(id, value) {
             if (value === '__custom__') {
                 const customName = prompt("신규 직원 이름을 입력하세요 (예: 이철수 기사):");
                 if (customName && customName.trim()) {

@@ -16,17 +16,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- SheetJS for Excel Export -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- EmailJS SDK -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script type="text/javascript">
-        (function() {
-            try { emailjs.init("YOUR_PUBLIC_KEY"); } catch(e){}
-        })();
-    </script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
         .tab-btn.active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
         canvas.sig-pad { border: 1px dashed #9ca3af; background-color: #ffffff; border-radius: 0.375rem; touch-action: none; }
+        
+        /* PDF 인쇄물 전용 보고서 양식 스타일 */
+        .pdf-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm;
+            margin: 0 auto;
+            background: #ffffff;
+            box-sizing: border-box;
+            color: #1e293b;
+            page-break-after: always;
+        }
+        .pdf-page:last-child { page-break-after: avoid; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px; }
+        .pdf-table th, .pdf-table td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center; font-size: 11px; word-break: break-all; }
+        .pdf-table th { background-color: #f1f5f9; color: #0f172a; font-weight: 700; }
     </style>
 </head>
 <body class="pb-28">
@@ -41,145 +50,69 @@
                 <h2 class="text-base font-bold text-slate-800">에프엠엘지엘리베이터㈜</h2>
                 <p class="text-xs text-slate-500">임직원 전용 위험성 평가 & TBM 시스템</p>
             </div>
-
-            <!-- Auth Tabs -->
-            <div class="flex border-b text-xs font-bold mb-3">
-                <button onclick="toggleAuthMode('login')" id="auth-tab-login" class="flex-1 py-2 text-center text-blue-600 border-b-2 border-blue-600 font-bold">로그인</button>
-                <button onclick="toggleAuthMode('signup')" id="auth-tab-signup" class="flex-1 py-2 text-center text-slate-400 border-b-2 border-transparent">회원가입</button>
-                <button onclick="toggleAuthMode('find')" id="auth-tab-find" class="flex-1 py-2 text-center text-slate-400 border-b-2 border-transparent">ID/PW 찾기</button>
-            </div>
-
-            <!-- Login Form -->
-            <div id="login-form" class="space-y-3">
+            <div class="space-y-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">아이디 (이메일)</label>
-                    <input type="text" id="login-id" placeholder="admin@fmlg.co.kr" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="login-id" placeholder="admin@fmlg.co.kr" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">비밀번호</label>
-                    <input type="password" id="login-pw" placeholder="••••••••" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="password" id="login-pw" placeholder="••••••••" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50">
                 </div>
-                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl shadow-md transition">
-                    로그인
-                </button>
+                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl shadow-md">로그인</button>
             </div>
+        </div>
+    </div>
 
-            <!-- Sign Up Form -->
-            <div id="signup-form" class="space-y-3 hidden">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">이름 / 직급</label>
-                    <input type="text" id="signup-name" placeholder="홍길동 (기사)" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">아이디 (이메일)</label>
-                    <input type="text" id="signup-id" placeholder="user@fmlg.co.kr" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">비밀번호</label>
-                    <input type="password" id="signup-pw" placeholder="••••••••" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">소속 부서 / 팀</label>
-                    <input type="text" id="signup-dept" placeholder="승강기 유지관리팀" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none">
-                </div>
-                <button onclick="handleSignUp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl shadow-md transition">
-                    가입 신청하기 (승인 대기)
-                </button>
+    <!-- 공용 보고서 미리보기 모달 -->
+    <div id="report-preview-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-6 space-y-4 border max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="preview-modal-title" class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-file-lines text-blue-600"></i> 보고서 미리보기
+                </h3>
+                <button onclick="closeReportPreviewModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-
-            <!-- Find ID / Reset PW Form -->
-            <div id="find-form" class="space-y-4 hidden text-xs">
-                <div class="p-3 bg-slate-50 rounded-xl border space-y-2">
-                    <span class="font-bold text-slate-800 text-xs block"><i class="fa-solid fa-magnifying-glass text-blue-600"></i> 아이디 찾기</span>
-                    <input type="text" id="find-id-name" placeholder="등록된 이름 (예: 홍길동)" class="w-full border rounded-lg p-2 bg-white">
-                    <button onclick="handleFindId()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg">아이디 찾기</button>
-                </div>
-                <div class="p-3 bg-slate-50 rounded-xl border space-y-2">
-                    <span class="font-bold text-slate-800 text-xs block"><i class="fa-solid fa-key text-amber-500"></i> 비밀번호 재설정</span>
-                    <input type="text" id="find-pw-id" placeholder="아이디 (이메일)" class="w-full border rounded-lg p-2 bg-white">
-                    <input type="password" id="find-pw-new" placeholder="새로운 비밀번호" class="w-full border rounded-lg p-2 bg-white">
-                    <button onclick="handleResetPw()" class="w-full bg-amber-600 text-white font-bold py-2 rounded-lg">비밀번호 변경</button>
-                </div>
+            <div id="report-preview-content" class="space-y-4 text-xs bg-slate-50 p-4 rounded-xl border"></div>
+            <div class="flex justify-end pt-2 border-t">
+                <button onclick="closeReportPreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl">닫기</button>
             </div>
         </div>
     </div>
 
     <!-- Header Navigation -->
-    <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
         <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
             <div>
                 <h1 class="text-base font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-shield-halved text-blue-400"></i>
-                    에프엠엘지엘리베이터㈜
+                    <i class="fa-solid fa-shield-halved text-blue-400"></i> 에프엠엘지엘리베이터㈜
                 </h1>
                 <p class="text-xs text-slate-300">위험성 평가 & TBM 스마트 통합 시스템</p>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="switchTab('profile')" id="header-user-badge" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-circle-user text-blue-400"></i>
-                    <span id="user-display-name" class="font-medium">로그인 필요</span>
+                <button onclick="switchTab('profile')" class="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-user text-blue-400"></i> <span id="user-display-name" class="font-medium">로그인 필요</span>
                 </button>
-                <button onclick="handleLogout()" title="로그아웃" class="bg-rose-900/60 hover:bg-rose-800 text-rose-200 text-xs p-1.5 rounded-lg border border-rose-700/50 flex items-center justify-center transition">
+                <button onclick="handleLogout()" title="로그아웃" class="bg-rose-900/60 text-rose-200 text-xs p-1.5 rounded-lg border border-rose-700/50">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Tab Bar -->
         <nav class="flex bg-slate-800 text-slate-300 text-xs border-t border-slate-700 overflow-x-auto">
-            <button onclick="switchTab('tbm')" id="tab-tbm" class="tab-btn active flex-1 py-2 text-center min-w-[55px] transition shrink-0">
-                <i class="fa-solid fa-users-gear block text-sm mb-0.5"></i> 1. TBM
-            </button>
-            <button onclick="switchTab('kras')" id="tab-kras" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
-                <i class="fa-solid fa-clipboard-check block text-sm mb-0.5"></i> 2. 위험성
-            </button>
-            <button onclick="switchTab('export')" id="tab-export" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
-                <i class="fa-solid fa-file-pdf block text-sm mb-0.5"></i> 3. 보고서
-            </button>
-            <button onclick="switchTab('search')" id="tab-search" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
-                <i class="fa-solid fa-magnifying-glass block text-sm mb-0.5"></i> 4. 이력조회
-            </button>
-            <button onclick="switchTab('master')" id="tab-master" class="tab-btn flex-1 py-2 text-center min-w-[65px] transition shrink-0">
-                <i class="fa-solid fa-sliders block text-sm mb-0.5 text-amber-400"></i> 5. 고정항목
-            </button>
-            <button onclick="switchTab('admin')" id="tab-admin" class="tab-btn flex-1 py-2 text-center min-w-[65px] transition shrink-0">
-                <i class="fa-solid fa-users-gear block text-sm mb-0.5 text-blue-400"></i> 6. 회원관리
-            </button>
-            <button onclick="switchTab('expense')" id="tab-expense" class="tab-btn flex-1 py-2 text-center min-w-[65px] transition shrink-0">
-                <i class="fa-solid fa-receipt block text-sm mb-0.5 text-emerald-400"></i> 7. 경비청구
-            </button>
-            <button onclick="switchTab('profile')" id="tab-profile" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
-                <i class="fa-solid fa-id-card block text-sm mb-0.5"></i> 8. 내 정보
-            </button>
+            <button onclick="switchTab('tbm')" id="tab-tbm" class="tab-btn active flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-users-gear block text-sm mb-0.5"></i> 1. TBM</button>
+            <button onclick="switchTab('kras')" id="tab-kras" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-clipboard-check block text-sm mb-0.5"></i> 2. 위험성</button>
+            <button onclick="switchTab('search')" id="tab-search" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-magnifying-glass block text-sm mb-0.5"></i> 3. 이력조회</button>
+            <button onclick="switchTab('notice')" id="tab-notice" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-bullhorn block text-sm mb-0.5 text-amber-400"></i> 4. 공지사항</button>
+            <button onclick="switchTab('contacts')" id="tab-contacts" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-address-book block text-sm mb-0.5 text-emerald-400"></i> 5. 비상연락망</button>
+            <button onclick="switchTab('master')" id="tab-master" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-sliders block text-sm mb-0.5 text-blue-400"></i> 6. 고정항목</button>
+            <button onclick="switchTab('users')" id="tab-users" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0 hidden"><i class="fa-solid fa-users block text-sm mb-0.5 text-emerald-400"></i> 7. 회원관리</button>
+            <button onclick="switchTab('admin')" id="tab-admin" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0 hidden"><i class="fa-solid fa-stamp block text-sm mb-0.5 text-purple-400"></i> 8. 결재함</button>
+            <button onclick="switchTab('expense')" id="tab-expense" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-receipt block text-sm mb-0.5 text-purple-400"></i> 9. 경비청구</button>
+            <button onclick="switchTab('profile')" id="tab-profile" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-id-card block text-sm mb-0.5"></i> 10. 내정보</button>
         </nav>
     </header>
 
-    <!-- Notice Modal -->
-    <div id="notice-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 border border-slate-100 relative">
-            <div class="flex items-center gap-3 border-b pb-3">
-                <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-sm">
-                    <i class="fa-solid fa-bullhorn"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800 text-sm">안전관리팀 주요 공지사항</h3>
-                    <p class="text-[10px] text-slate-500">에프엠엘지엘리베이터 전 직원 필수 숙지</p>
-                </div>
-            </div>
-            <div id="notice-modal-content" class="text-xs text-slate-700 bg-slate-50 p-3.5 rounded-xl border border-slate-200 leading-relaxed max-h-60 overflow-y-auto space-y-2"></div>
-            <div class="flex items-center justify-between pt-2">
-                <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none">
-                    <input type="checkbox" id="chk-dont-show-today" class="w-4 h-4 text-blue-600 rounded">
-                    <span>오늘 하루 동안 보지 않기</span>
-                </label>
-                <button onclick="closeNoticeModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow">
-                    확인 및 닫기
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content Container -->
     <main class="max-w-5xl mx-auto p-4 space-y-4">
 
         <!-- TAB 1: TBM -->
@@ -187,701 +120,2104 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-4">
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                            <i class="fa-solid fa-building-user text-blue-600"></i> 현장 및 TBM 정보
-                        </h2>
+                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-building-user text-blue-600"></i> TBM 현장 정보</h2>
                         <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div class="col-span-2">
-                                <label class="block text-slate-500 mb-1">현장명</label>
-                                <input type="text" id="site-name" value="강남 아크로 타워 (M-01)" class="w-full border rounded p-2 bg-slate-50 font-medium">
-                            </div>
+                            <div class="col-span-2"><label class="block text-slate-500 mb-1">현장명</label><input type="text" id="tbm-site-name" value="강남 아크로 타워 (M-01)" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                            <div><label class="block text-slate-500 mb-1">작업일자</label><input type="date" id="tbm-work-date" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                            <div><label class="block text-slate-500 mb-1">TBM 작업시간</label><input type="time" id="tbm-time" value="08:00" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
                             <div>
-                                <label class="block text-slate-500 mb-1">작업일자</label>
-                                <input type="date" id="work-date" value="2026-08-31" class="w-full border rounded p-2 bg-slate-50 font-medium">
+                                <label class="block text-slate-500 mb-1 font-bold text-blue-600">공종구분 선택</label>
+                                <select id="tbm-process-name" class="w-full border rounded p-2 bg-blue-50 font-bold text-blue-900">
+                                    <option value="승강기유지관리/정기점검">승강기유지관리/정기점검</option>
+                                    <option value="승강기법정검사">승강기법정검사</option>
+                                    <option value="승강기고장수리">승강기고장수리</option>
+                                    <option value="승강기부품교체">승강기부품교체</option>
+                                    <option value="승강기공사">승강기공사</option>
+                                </select>
                             </div>
-                            <div>
-                                <label class="block text-slate-500 mb-1">TBM 작업시간</label>
-                                <input type="time" id="tbm-time" value="08:00" class="w-full border rounded p-2 bg-slate-50 font-medium">
-                            </div>
-                            <div>
-                                <label class="block text-slate-500 mb-1">공종구분</label>
-                                <input type="text" id="process-name" value="승강기 유지관리/부품교체" class="w-full border rounded p-2 bg-slate-50 font-medium">
-                            </div>
-                            <div>
-                                <label class="block text-slate-500 mb-1">TBM 리더(관리감독자)</label>
-                                <input type="text" id="tbm-leader" value="홍길동" class="w-full border rounded p-2 bg-slate-50 font-medium">
-                            </div>
+                            <div><label class="block text-slate-500 mb-1">TBM 리더</label><input type="text" id="tbm-leader" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
                         </div>
                     </div>
 
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
                         <div class="flex justify-between items-center">
-                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                                <i class="fa-solid fa-list-check text-blue-600"></i> TBM 필수 점검 항목
-                            </h2>
-                            <button onclick="addChecklistItem()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1">
-                                <i class="fa-solid fa-plus"></i> 항목 추가
-                            </button>
+                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-list-check text-blue-600"></i> TBM 필수 점검 항목</h2>
+                            <button onclick="addChecklistItemUI()" class="bg-blue-50 text-blue-600 text-xs px-2.5 py-1 rounded-md font-bold">+ 항목 추가</button>
                         </div>
                         <div id="checklist-container" class="space-y-2 text-xs"></div>
                     </div>
 
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                            <i class="fa-solid fa-camera text-blue-600"></i> TBM 현장/단체 사진
-                        </h2>
-                        <input type="file" id="tbm-photo-input" accept="image/*" capture="environment" onchange="handleTbmPhotoUpload(this)" class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        <div id="tbm-photo-preview" class="mt-2 hidden">
-                            <img id="tbm-photo-img" src="" class="h-32 rounded-lg border object-cover">
-                        </div>
+                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-camera text-blue-600"></i> TBM 현장 사진 등록</h2>
+                        <input type="file" id="tbm-photo-input" accept="image/*" capture="environment" onchange="previewTbmPhoto(this)" class="text-xs text-slate-500">
+                        <div id="tbm-photo-preview" class="mt-2 hidden"><img id="tbm-photo-img" src="" class="h-32 rounded-lg border object-cover"></div>
                     </div>
 
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                            <i class="fa-solid fa-pen-to-square text-amber-500"></i> 특이사항 및 현장 지시사항
-                        </h2>
-                        <textarea id="tbm-notes" placeholder="현장 특이사항, 위험 요소 지시사항, 우천/강풍 대비 등 기재" class="w-full text-xs border rounded p-2.5 bg-slate-50 h-24 focus:outline-none focus:ring-1 focus:ring-blue-500"></textarea>
+                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-pen-to-square text-amber-500"></i> 특이사항</h2>
+                        <textarea id="tbm-notes" placeholder="특이사항 기재" class="w-full text-xs border rounded p-2.5 bg-slate-50 h-20"></textarea>
                     </div>
                 </div>
 
                 <div class="space-y-4 flex flex-col justify-between">
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
                         <div class="flex justify-between items-center">
-                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                                <i class="fa-solid fa-users text-blue-600"></i> 참석 근로자 선택 및 서명
-                            </h2>
-                            <button onclick="addWorkerCard()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1">
-                                <i class="fa-solid fa-user-plus"></i> 근로자 추가
-                            </button>
+                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-users text-blue-600"></i> 참석 근로자 및 서명</h2>
+                            <button onclick="addWorkerCard()" class="bg-blue-50 text-blue-600 text-xs px-2.5 py-1 rounded-md font-bold">+ 근로자 추가</button>
                         </div>
-                        <div class="relative">
-                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                            <input type="text" id="worker-search-filter" oninput="filterWorkerOptions(this.value)" placeholder="🔍 근로자 이름 검색 (예: 홍길동, 김안전)" class="w-full text-xs pl-8 pr-3 py-2 border rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none font-medium">
-                        </div>
-                        <div id="workers-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-1"></div>
+                        <div id="workers-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-1"></div>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-2 pt-1">
-                        <button onclick="saveDataOffline()" class="bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow">
-                            <i class="fa-solid fa-floppy-disk"></i> 저장
-                        </button>
-                        <button onclick="switchTab('export'); generatePDFReport();" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow">
-                            <i class="fa-solid fa-file-pdf"></i> PDF 다운
-                        </button>
-                        <button onclick="sendEmailReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow">
-                            <i class="fa-solid fa-paper-plane"></i> 이메일 제출
-                        </button>
+                    <div class="space-y-2">
+                        <button onclick="saveTbmDataOffline()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-floppy-disk text-amber-400"></i> TBM 저장 및 이력 등록</button>
+                        <button onclick="openTbmPreviewModal()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-eye"></i> TBM 보고서 미리보기</button>
+                        <button onclick="generateTbmReportPDF()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-file-pdf"></i> TBM 보고서 PDF 출력/다운로드</button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 2: KRAS -->
+        <!-- TAB 2: KRAS 위험성 평가 -->
         <section id="sec-kras" class="space-y-4 hidden">
-            <div class="flex flex-wrap justify-between items-center gap-2 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-                <div>
-                    <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                        <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> KRAS 3x3 유해·위험요인 평가작성
-                    </h2>
-                    <p class="text-[11px] text-slate-500 mt-0.5">현장 위험요인을 등록 및 평가하고 저장 버튼을 눌러 확정하세요.</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-building-user text-blue-600"></i> 위험성평가 현장 정보 등록</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div><label class="block text-slate-500 mb-1">현장명</label><input type="text" id="kras-site-name" value="강남 아크로 타워 (M-01)" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                    <div><label class="block text-slate-500 mb-1">평가일자</label><input type="date" id="kras-work-date" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold text-blue-600">대분류 선택</label>
+                        <select id="kras-main-category" onchange="onMainCategoryChange()" class="w-full border rounded p-2 bg-blue-50 font-bold text-blue-900">
+                            <option value="승강기점검">승강기점검</option>
+                            <option value="승강기고장수리">승강기고장수리</option>
+                            <option value="승강기부품교체">승강기부품교체</option>
+                            <option value="승강기공사">승강기공사</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    <button onclick="addAssessmentCard()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1 font-bold shadow-sm">
-                        <i class="fa-solid fa-plus"></i> 항목 추가
-                    </button>
-                    <button onclick="saveDataOffline()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 font-bold shadow-sm">
-                        <i class="fa-solid fa-floppy-disk text-amber-400"></i> 위험성평가 저장
-                    </button>
+
+                <!-- 위험성평가 평가자 및 근로자 서명 구역 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
+                    <div class="space-y-1">
+                        <label class="block text-slate-700 font-bold">평가담당자 성명 및 서명</label>
+                        <input type="text" id="kras-evaluator" class="w-full border rounded p-1.5 bg-slate-50 mb-1 text-xs font-bold">
+                        <div class="flex justify-between items-center text-[10px] text-slate-400">
+                            <span>서명 란</span>
+                            <button onclick="krasEvaluatorSigPad.clear()" class="text-rose-500 font-bold">서명 지우기</button>
+                        </div>
+                        <canvas id="kras-eval-sig-canvas" class="sig-pad w-full h-16"></canvas>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center">
+                            <label class="block text-slate-700 font-bold">참석 근로자 서명 (다중)</label>
+                            <button onclick="addKrasWorkerInput()" class="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 rounded font-bold">+ 근로자 추가</button>
+                        </div>
+                        <div id="kras-workers-sig-container" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+                    </div>
                 </div>
+            </div>
+
+            <div class="flex justify-between items-center bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> KRAS 3x3 위험성평가 (계층형 드롭다운 및 복수 개선대책 연동)</h2>
+                <button onclick="addAssessmentCard()" class="bg-blue-600 text-white text-xs px-3 py-2 rounded-lg font-bold shadow-sm">+ 평가 항목 추가</button>
             </div>
 
             <div id="risk-card-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
 
-            <div class="pt-2 grid grid-cols-3 gap-2">
-                <button onclick="saveDataOffline()" class="col-span-2 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md">
-                    <i class="fa-solid fa-floppy-disk text-amber-400 text-sm"></i> 위험성평가 저장 및 이력 등록
-                </button>
-                <button onclick="switchTab('export'); generateRiskPDF();" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow-md">
-                    <i class="fa-solid fa-file-pdf"></i> PDF 다운
-                </button>
-            </div>
-        </section>
-
-        <!-- TAB 3: Report & Export -->
-        <section id="sec-export" class="space-y-4 hidden">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center space-y-3">
-                <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600 text-xl">
-                    <i class="fa-solid fa-file-pdf"></i>
-                </div>
-                <div>
-                    <h2 class="font-bold text-slate-800 text-base">보고서 선택 및 내보내기</h2>
-                    <p class="text-xs text-slate-500 mt-1">TBM 일일 기록부와 KRAS 위험성 평가서를 각각 개별 보고서로 다운로드할 수 있습니다.</p>
-                </div>
-
-                <div class="pt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <button onclick="generateTbmPDF()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-2 rounded-xl text-xs shadow flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-file-lines"></i> 1. TBM 기록부 다운
-                    </button>
-                    <button onclick="generateRiskPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-2 rounded-xl text-xs shadow flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-clipboard-check"></i> 2. 위험성 평가서 다운
-                    </button>
-                    <button onclick="generateCombinedPDF()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-2 rounded-xl text-xs shadow flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-file-pdf"></i> 3. 통합 PDF 다운
-                    </button>
-                    <button onclick="sendEmailReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-2 rounded-xl text-xs shadow flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-paper-plane"></i> 4. 이메일 작성창 열기
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex border-b border-slate-300 text-xs font-bold">
-                <button onclick="toggleReportView('tbm')" id="btn-view-tbm" class="py-2 px-4 border-b-2 border-blue-600 text-blue-600 bg-white rounded-t-lg">
-                    📄 TBM 일일 기록부 미리보기
-                </button>
-                <button onclick="toggleReportView('risk')" id="btn-view-risk" class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-800">
-                    📋 위험성 평가서 미리보기
-                </button>
-            </div>
-
-            <div id="wrapper-tbm-report" class="overflow-x-auto bg-white p-2 border rounded-lg">
-                <div id="printable-tbm-area" class="bg-white p-5 text-[10px] leading-relaxed text-slate-800 border min-h-[500px]">
-                    <div class="flex justify-between items-start border-b-2 border-blue-900 pb-2 mb-3">
-                        <div class="text-left font-bold text-lg text-slate-900 pt-1">
-                            에프엠엘지엘리베이터㈜ - TBM 일일 안전 기록부
-                        </div>
-                        <table class="border-collapse border border-slate-500 text-center text-[8px] w-48">
-                            <tr class="bg-slate-100 font-bold">
-                                <td rowspan="2" class="border border-slate-500 w-5 bg-slate-200">결<br>재</td>
-                                <td class="border border-slate-500 w-14 p-0.5">작 성</td>
-                                <td class="border border-slate-500 w-14 p-0.5">검 토</td>
-                                <td class="border border-slate-500 w-14 p-0.5">승 인</td>
-                            </tr>
-                            <tr class="h-9">
-                                <td id="pdf-tbm-sign-draft" class="border border-slate-500 p-0.5 align-middle text-[8px] text-slate-400">담당자</td>
-                                <td id="pdf-tbm-sign-review" class="border border-slate-500 p-0.5 align-middle text-[8px] text-slate-400">팀 장</td>
-                                <td id="pdf-tbm-sign-approve" class="border border-slate-500 p-0.5 align-middle text-[8px] text-slate-400">대표이사</td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <table class="w-full border-collapse border border-slate-400 mb-3 text-center text-[9px]">
-                        <tr class="bg-slate-100 font-bold">
-                            <th class="border border-slate-400 p-1.5 w-1/6">현 장 명</th>
-                            <td id="pdf-tbm-site" class="border border-slate-400 p-1.5 w-2/6">강남 아크로 타워</td>
-                            <th class="border border-slate-400 p-1.5 w-1/6">일자 / 시간</th>
-                            <td id="pdf-tbm-date-time" class="border border-slate-400 p-1.5 w-2/6">2026-08-31 / 08:00</td>
-                        </tr>
-                        <tr>
-                            <th class="border border-slate-400 p-1.5 bg-slate-100">공종 구분</th>
-                            <td id="pdf-tbm-process" class="border border-slate-400 p-1.5">승강기 유지관리</td>
-                            <th class="border border-slate-400 p-1.5 bg-slate-100">TBM 리더</th>
-                            <td id="pdf-tbm-leader" class="border border-slate-400 p-1.5">홍길동</td>
-                        </tr>
-                    </table>
-
-                    <div class="font-bold text-[11px] text-blue-900 mb-1 flex items-center gap-1">■ 1. TBM 필수 점검 항목</div>
-                    <div id="pdf-tbm-checklist-list" class="border border-slate-400 p-2.5 mb-3 bg-slate-50 text-[9px] space-y-1"></div>
-
-                    <div class="font-bold text-[11px] text-blue-900 mb-1 flex items-center gap-1">■ 2. 참석 근로자 및 서명 명단</div>
-                    <div class="border border-slate-400 p-2.5 mb-3 bg-slate-50 text-[9px] flex flex-wrap gap-3" id="pdf-tbm-workers-list"></div>
-
-                    <div class="font-bold text-[11px] text-blue-900 mb-1 flex items-center gap-1">■ 3. TBM 현장 사진 및 특이사항</div>
-                    <div class="border border-slate-400 p-3 mb-2 bg-white grid grid-cols-2 gap-3 items-start text-[9px]">
-                        <div>
-                            <span class="font-bold text-slate-700 block mb-1">[TBM 현장/작업 전 사진]</span>
-                            <div id="pdf-tbm-photo-box" class="h-36 border bg-slate-50 rounded flex items-center justify-center text-slate-400">사진 미첨부</div>
-                        </div>
-                        <div>
-                            <span class="font-bold text-slate-700 block mb-1">[현장 지시사항 및 특이사항]</span>
-                            <div id="pdf-tbm-notes-box" class="p-2 border bg-amber-50 rounded h-36 text-slate-800 text-[9px] whitespace-pre-line">특이사항 없음</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="wrapper-risk-report" class="overflow-x-auto bg-white p-2 border rounded-lg hidden">
-                <div id="printable-risk-area" class="bg-white p-4 text-[10px] leading-tight text-slate-800 border">
-                    <div class="flex justify-between items-start border-b-2 border-blue-900 pb-2 mb-2">
-                        <div class="text-left font-bold text-base text-slate-900 pt-2">에프엠엘지엘리베이터㈜ - KRAS 위험성 평가서</div>
-                    </div>
-                    <table class="w-full border-collapse border border-slate-400 mb-2 text-center text-[9px]">
-                        <tr class="bg-slate-100">
-                            <th class="border border-slate-400 p-1">회 사 명</th>
-                            <td class="border border-slate-400 p-1">에프엠엘지엘리베이터㈜</td>
-                            <th class="border border-slate-400 p-1">현 장 명</th>
-                            <td id="pdf-risk-site" class="border border-slate-400 p-1">강남 아크로 타워</td>
-                            <th class="border border-slate-400 p-1">평 가 일 자</th>
-                            <td id="pdf-risk-date" class="border border-slate-400 p-1">2026-08-31</td>
-                        </tr>
-                    </table>
-                    <table class="w-full border-collapse border border-slate-400 text-center text-[8px]">
-                        <thead>
-                            <tr class="bg-blue-900 text-white">
-                                <th class="border border-slate-400 p-1 w-[14%]">공정/작업</th>
-                                <th class="border border-slate-400 p-1 w-[26%]">유해위험요인</th>
-                                <th class="border border-slate-400 p-1 w-[20%]">현장 사진</th>
-                                <th class="border border-slate-400 p-1 w-[10%]">위험도</th>
-                                <th class="border border-slate-400 p-1 w-[30%]">개선대책</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pdf-risk-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="wrapper-combined-report" class="hidden">
-                <div id="printable-combined-area" class="bg-white p-4 space-y-6">
-                    <div id="combined-tbm-part"></div>
-                    <div style="page-break-before: always; break-before: page;"></div>
-                    <div id="combined-risk-part"></div>
+            <div class="bg-white p-4 rounded-xl border space-y-2 shadow-sm">
+                <button onclick="saveKrasDataOffline()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-floppy-disk text-amber-400"></i> 위험성평가 저장 및 이력 등록</button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="openKrasPreviewModal()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-eye"></i> 위험성평가 미리보기</button>
+                    <button onclick="generateKrasReportPDF()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-file-pdf"></i> 위험성평가 PDF 출력/다운</button>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 4: Search -->
+        <!-- TAB 3: 이력 조회 -->
         <section id="sec-search" class="space-y-4 hidden">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <h2 class="font-bold text-slate-800 text-sm">안전 점검 / TBM 이력 검색</h2>
+                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-magnifying-glass text-blue-600"></i> TBM 및 위험성 평가 이력 검색</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                     <input type="date" id="search-date" oninput="searchHistoryRecords()" class="border rounded-lg p-2 bg-slate-50">
-                    <input type="text" id="search-site" oninput="searchHistoryRecords()" placeholder="예: 강남 아크로 타워" class="border rounded-lg p-2 bg-slate-50">
-                    <input type="text" id="search-author" oninput="searchHistoryRecords()" placeholder="예: 홍길동" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="search-site" oninput="searchHistoryRecords()" placeholder="현장명 검색" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="search-author" oninput="searchHistoryRecords()" placeholder="작성자/근로자 검색" class="border rounded-lg p-2 bg-slate-50">
                 </div>
-                <div class="flex flex-wrap gap-2 pt-2 border-t text-xs">
-                    <button onclick="searchHistoryRecords()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex-1">검색 실행</button>
-                    <button onclick="exportHistoryToExcel()" class="bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg flex-1">엑셀 다운로드</button>
-                </div>
+                <button onclick="exportHistoryToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-sm">📊 이력 전체 엑셀 다운로드</button>
             </div>
             <div id="search-results-list" class="space-y-3"></div>
         </section>
 
-        <!-- TAB 5: Master -->
-        <section id="sec-master" class="space-y-4 hidden">
-            <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex items-center justify-between">
-                <div>
-                    <h2 class="font-bold text-sm text-amber-400">TBM & 위험성평가 고정 항목 통합 관리센터</h2>
+        <!-- TAB 4: 공지사항 -->
+        <section id="sec-notice" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-sm border-b pb-2 text-amber-600"><i class="fa-solid fa-bullhorn"></i> 공지사항 등록</h3>
+                <div class="space-y-2 text-xs">
+                    <input type="text" id="notice-title" placeholder="제목" class="w-full border rounded-lg p-2 bg-slate-50">
+                    <textarea id="notice-content" placeholder="내용" class="w-full border rounded-lg p-2.5 bg-slate-50 h-28"></textarea>
                 </div>
+                <button onclick="saveNotice()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2.5 rounded-lg shadow">공지사항 등록</button>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <h3 class="font-bold text-slate-800 text-sm">1. TBM 필수 고정 점검항목 설정</h3>
-                <div class="flex gap-2 text-xs">
-                    <input type="text" id="admin-new-checklist-item" placeholder="새로운 필수 점검항목 입력" class="flex-1 border rounded-lg p-2.5 bg-slate-50">
-                    <button onclick="addAdminChecklistItem()" class="bg-blue-600 text-white font-bold px-4 py-2.5 rounded-lg">항목 추가</button>
-                </div>
-                <div id="admin-checklist-items-list" class="space-y-2 text-xs"></div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <h3 class="font-bold text-slate-800 text-sm">2. KRAS 위험성평가 표준 DB 관리</h3>
-                <div id="master-hazard-db-list" class="space-y-3 text-xs"></div>
+            <div class="bg-white p-4 rounded-xl border space-y-3">
+                <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-list"></i> 안전관리팀 공지사항 목록</h3>
+                <div id="notice-board-list" class="space-y-3"></div>
             </div>
         </section>
 
-        <!-- TAB 6: Admin -->
-        <section id="sec-admin" class="space-y-4 hidden">
-            <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex items-center justify-between">
-                <div>
-                    <h2 class="font-bold text-sm text-blue-400">사내 임직원 회원 관리 센터</h2>
-                </div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <div id="admin-user-list" class="space-y-2"></div>
-            </div>
-        </section>
-
-        <!-- TAB 7: 개인사용비용 청구서 (경비 청구 모듈) -->
-        <section id="sec-expense" class="space-y-4 hidden">
-            <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex items-center justify-between">
-                <div>
-                    <h2 class="font-bold text-sm flex items-center gap-1.5 text-emerald-400">
-                        <i class="fa-solid fa-receipt"></i> 개인사용비용 청구서 작성
-                    </h2>
-                    <p class="text-xs text-slate-300 mt-1">지출 내역을 입력하고 영수증 사진을 올려 전자결재 및 세무 증빙을 등록합니다.</p>
-                </div>
-                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded font-bold">에프엠엘지 전용</span>
-            </div>
-
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 border-b pb-2">
-                    <i class="fa-solid fa-pen-to-square text-blue-600"></i> 청구 기본 정보 및 지출 내역
+        <!-- TAB 5: 직원 비상연락망 -->
+        <section id="sec-contacts" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 text-emerald-600 border-b pb-2">
+                    <i class="fa-solid fa-address-book"></i> 임직원 및 협력사 비상연락망 관리
                 </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                    <input type="text" id="contact-name" placeholder="이름" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-dept" placeholder="소속/부서 (예: 유지관리1팀)" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-phone" placeholder="전화번호 (예: 010-1234-5678)" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-role" placeholder="직급/역할 (예: 과장/현장소장)" class="border rounded-lg p-2 bg-slate-50">
+                </div>
+                <button onclick="addEmergencyContact()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg shadow">비상연락망 등록</button>
+            </div>
+            <div class="bg-white p-4 rounded-xl border space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-list text-slate-700"></i> 비상연락망 목록</h3>
+                    <input type="text" id="contact-search" oninput="renderEmergencyContacts()" placeholder="이름/부서 검색" class="border rounded px-2 py-1 text-xs bg-slate-50 w-48">
+                </div>
+                <div id="contacts-list" class="space-y-2"></div>
+            </div>
+        </section>
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                    <div>
-                        <label class="block text-slate-500 mb-1 font-bold">결의(품의)일자</label>
-                        <input type="date" id="exp-claim-date" class="w-full border rounded-lg p-2 bg-slate-50 font-medium">
-                    </div>
-                    <div>
-                        <label class="block text-slate-500 mb-1 font-bold">부서명</label>
-                        <input type="text" id="exp-dept" value="서비스사업부" class="w-full border rounded-lg p-2 bg-slate-50 font-medium">
-                    </div>
-                    <div>
-                        <label class="block text-slate-500 mb-1 font-bold">청구자 (직책/성명)</label>
-                        <input type="text" id="exp-author" placeholder="과장 홍길동" class="w-full border rounded-lg p-2 bg-slate-50 font-medium">
+        <!-- TAB 6: 고정항목 관리 -->
+        <section id="sec-master" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl border space-y-3">
+                <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-sliders text-blue-500"></i> TBM 필수 고정 점검항목 설정</h3>
+                <div class="flex gap-2 text-xs">
+                    <input type="text" id="admin-new-checklist-item" placeholder="새 항목 입력" class="flex-1 border rounded-lg p-2.5 bg-slate-50">
+                    <button onclick="addMasterChecklistItem()" class="bg-blue-600 text-white font-bold px-4 py-2.5 rounded-lg">추가</button>
+                </div>
+                <div id="admin-checklist-items-list" class="space-y-2 text-xs pt-2"></div>
+            </div>
+        </section>
+
+        <!-- TAB 7: 회원 관리 -->
+        <section id="sec-users" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 text-blue-600 border-b pb-2"><i class="fa-solid fa-user-plus"></i> 신규 회원 직접 등록</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <input type="text" id="admin-add-name" placeholder="이름 (예: 홍길동)" class="w-full border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="admin-add-rank" placeholder="직급 (예: 과장)" class="w-full border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="admin-add-id" placeholder="아이디 (이메일)" class="w-full border rounded-lg p-2 bg-slate-50">
+                    <input type="password" id="admin-add-pw" placeholder="초기 비밀번호" value="123" class="w-full border rounded-lg p-2 bg-slate-50">
+                </div>
+                <button onclick="registerUserByAdmin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-lg shadow">회원 등록 및 승인</button>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-users text-slate-700"></i> 임직원 회원 목록 및 관리 (관리자 전용 ID/PW 수정)</h3>
+                <div id="admin-user-list" class="space-y-3"></div>
+            </div>
+        </section>
+
+        <!-- TAB 8: 결재함 -->
+        <section id="sec-admin" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3 shadow-sm">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-2 gap-2">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 text-purple-600">
+                        <i class="fa-solid fa-stamp"></i> [관리자 전용] 결재 대기 수신함 (선택 합산)
+                    </h3>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="selectAllApprovalCheckboxes(true)" class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg font-bold">전체 선택</button>
+                        <button onclick="selectAllApprovalCheckboxes(false)" class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-lg font-bold">선택 해제</button>
                     </div>
                 </div>
 
-                <div class="pt-2 space-y-3">
-                    <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
-                        <span class="text-xs font-bold text-slate-800">지출 항목 입력</span>
-                        <button onclick="addExpenseRow()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1 shadow-sm">
-                            <i class="fa-solid fa-plus"></i> 항목 추가
+                <div class="bg-purple-50 p-3 rounded-xl border border-purple-100 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <div><label class="block font-bold text-purple-900 mb-1">결재완료일자</label><input type="date" id="admin-batch-approved-date" class="w-full border rounded-lg p-2 bg-white font-bold text-emerald-700"></div>
+                        <div><label class="block font-bold text-purple-900 mb-1">이체예정일자</label><input type="date" id="admin-batch-paydate" class="w-full border rounded-lg p-2 bg-white font-bold text-purple-700"></div>
+                        <div><label class="block font-bold text-purple-900 mb-1">지급완료일자</label><input type="date" id="admin-batch-paid-date" class="w-full border rounded-lg p-2 bg-white font-bold text-blue-700"></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <button onclick="previewSelectedBatchCombineReport()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs py-2.5 rounded-xl shadow flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-eye"></i> 선택 건 합산 결재서 미리보기
+                        </button>
+                        <button onclick="processSelectedBatchApproveOnly()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-xl shadow flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-check-double"></i> 선택 건 일괄 승인 완료 처리
                         </button>
                     </div>
+                </div>
 
-                    <div id="expense-items-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-1"></div>
+                <div id="admin-approval-queue" class="space-y-3 pt-2"></div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border space-y-3 shadow-sm">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-file-invoice-dollar text-purple-600"></i> 결재 완료된 청구 내역 조회 및 PDF 출력</h3>
+                    <button onclick="exportQuarterlyTaxExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow">📊 세무서용 엑셀</button>
+                </div>
+                <div id="admin-saved-expense-list" class="space-y-3"></div>
+            </div>
+        </section>
+
+        <!-- TAB 9: 경비청구 -->
+        <section id="sec-expense" class="space-y-4 hidden">
+            <div class="bg-slate-900 text-white p-4 rounded-xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h2 class="font-bold text-sm text-purple-400"><i class="fa-solid fa-receipt"></i> 개인사용비용 청구서 작성 및 전자결재</h2>
+                    <p class="text-xs text-slate-300 mt-1">지출 항목 작성, 계정과목 선택, 영수증 사진 첨부 및 보고서 확인을 지원합니다.</p>
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="openExpensePreviewModal()" class="flex-1 sm:flex-none bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow"><i class="fa-solid fa-eye"></i> 미리보기</button>
+                    <button onclick="generateExpenseReportPDF()" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow"><i class="fa-solid fa-file-pdf"></i> PDF 출력</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border space-y-3 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-sm border-b pb-2"><i class="fa-solid fa-pen-to-square text-blue-600"></i> 경비 지출 내역 작성 및 결재 상신</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                    <div><label class="block text-slate-500 mb-1 font-bold">결의일자</label><input type="date" id="exp-claim-date" class="w-full border rounded-lg p-2 bg-slate-50"></div>
+                    <div><label class="block text-slate-500 mb-1 font-bold">부서명</label><input type="text" id="exp-dept" value="서비스사업부" class="w-full border rounded-lg p-2 bg-slate-50"></div>
+                    <div><label class="block text-slate-500 mb-1 font-bold">기안자</label><input type="text" id="exp-author" placeholder="홍길동 과장" class="w-full border rounded-lg p-2 bg-slate-50"></div>
+                    <div><label class="block text-slate-500 mb-1 font-bold">지급받는 자</label><input type="text" id="exp-payee" placeholder="홍길동" class="w-full border rounded-lg p-2 bg-slate-50 font-bold text-blue-900"></div>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="addExpenseRow()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg font-bold mb-3 shadow-sm"><i class="fa-solid fa-plus"></i> 영수증/지출 항목 추가</button>
+                    <div id="expense-items-container" class="space-y-3 max-h-[450px] overflow-y-auto pr-1"></div>
                 </div>
 
                 <div class="pt-3 border-t flex items-center justify-between">
-                    <div class="text-xs">
-                        <span class="text-slate-500 font-bold">총 지출 금액:</span>
-                        <span id="exp-total-amount" class="text-base font-bold text-blue-600 ml-1">0 원</span>
-                    </div>
+                    <div><span class="text-xs text-slate-500 font-bold">총 지출 금액:</span> <span id="exp-total-amount" class="text-base font-bold text-blue-600 ml-1">0 원</span></div>
                     <div class="flex gap-2">
-                        <button onclick="saveExpenseData()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5">
-                            <i class="fa-solid fa-floppy-disk text-amber-400"></i> 청구서 저장
-                        </button>
-                        <button onclick="exportExpenseExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5">
-                            <i class="fa-solid fa-file-excel"></i> 엑셀 출력
-                        </button>
+                        <button onclick="saveExpenseReport('결재대기')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow">🔍 결재 상신하기</button>
+                        <button onclick="saveExpenseReport('미결재')" class="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow">💾 임시 저장</button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 8: Profile -->
+        <!-- TAB 10: 내 정보 -->
         <section id="sec-profile" class="space-y-4 hidden">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                <div class="flex items-center gap-3 border-b pb-4">
-                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl font-bold">
-                        <i class="fa-solid fa-user"></i>
+            <div class="bg-white p-5 rounded-2xl border space-y-4 shadow-sm max-w-lg mx-auto">
+                <div class="text-center space-y-1 border-b pb-4">
+                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto shadow">
+                        <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                    <h2 class="font-bold text-slate-800 text-base pt-2" id="profile-name">홍길동</h2>
+                    <p class="text-xs text-slate-500" id="profile-dept">에프엠엘지엘리베이터㈜ / 안전관리부</p>
+                </div>
+                
+                <div class="space-y-3 text-xs">
+                    <h3 class="font-bold text-slate-700"><i class="fa-solid fa-key text-blue-600"></i> 내 계정 비밀번호 변경</h3>
+                    <div>
+                        <label class="block text-slate-500 mb-1">현재 비밀번호</label>
+                        <input type="password" id="my-current-pw" placeholder="••••••••" class="w-full border rounded-lg p-2.5 bg-slate-50">
                     </div>
                     <div>
-                        <h2 class="font-bold text-slate-800 text-base" id="profile-name">홍길동</h2>
-                        <p class="text-xs text-slate-500" id="profile-dept">에프엠엘지엘리베이터㈜ / 승강기유지관리팀</p>
+                        <label class="block text-slate-500 mb-1">새 비밀번호</label>
+                        <input type="password" id="my-new-pw" placeholder="••••••••" class="w-full border rounded-lg p-2.5 bg-slate-50">
                     </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1">새 비밀번호 확인</label>
+                        <input type="password" id="my-new-pw-check" placeholder="••••••••" class="w-full border rounded-lg p-2.5 bg-slate-50">
+                    </div>
+                    <button onclick="updateMyPassword()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow">비밀번호 변경하기</button>
                 </div>
-                <button onclick="handleLogout()" class="w-full bg-rose-50 text-rose-600 font-bold text-xs py-3 rounded-xl">로그아웃</button>
+
+                <div class="pt-2 border-t">
+                    <button onclick="handleLogout()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold py-3 rounded-xl">로그아웃</button>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Original JavaScript Engine (Full Restored) -->
+    <!-- 숨김 PDF 출력 레이아웃 -->
+    <div style="position: fixed; top: -9999px; left: -9999px;">
+        <!-- TBM 보고서 PDF 양식 -->
+        <div id="printable-tbm-pdf" class="p-8 bg-white text-slate-900 text-xs space-y-3 font-sans" style="width: 210mm;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 6px;">
+                <div>
+                    <h1 class="text-lg font-bold">위험성평가 & TBM 현장 점검 보고서</h1>
+                    <p class="text-[11px] text-slate-500 mt-0.5">에프엠엘지엘리베이터㈜ 안전관리팀</p>
+                </div>
+            </div>
+
+            <!-- 현장정보 바로 아래 미니 콤팩트 결재 서명란 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <table class="w-2/3 border-collapse border border-slate-400 text-center text-xs">
+                    <tr class="bg-slate-100 font-bold">
+                        <td class="border border-slate-400 p-1.5 w-1/6">현장명</td>
+                        <td id="pdf-tbm-site" class="border border-slate-400 p-1.5 w-2/6"></td>
+                        <td class="border border-slate-400 p-1.5 w-1/6">작업일자</td>
+                        <td id="pdf-tbm-date" class="border border-slate-400 p-1.5 w-2/6"></td>
+                    </tr>
+                    <tr class="bg-slate-100 font-bold">
+                        <td class="border border-slate-400 p-1.5">공종구분</td>
+                        <td id="pdf-tbm-process" class="border border-slate-400 p-1.5"></td>
+                        <td class="border border-slate-400 p-1.5">TBM 리더</td>
+                        <td id="pdf-tbm-leader" class="border border-slate-400 p-1.5"></td>
+                    </tr>
+                </table>
+                <table style="border-collapse: collapse; text-align: center; font-size: 9px; width: 220px; border: 1px solid #94a3b8;">
+                    <tr style="background-color: #f1f5f9; font-weight: bold;">
+                        <td style="border: 1px solid #cbd5e1; padding: 2px;">작성자</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 2px;">담당자</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 2px;">소 장</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 2px;">대표이사</td>
+                    </tr>
+                    <tr style="height: 30px;">
+                        <td style="border: 1px solid #cbd5e1; vertical-align: middle; text-align: center; padding: 1px;" id="pdf-tbm-sign-author">작성</td>
+                        <td style="border: 1px solid #cbd5e1; vertical-align: middle; font-weight: bold; color: #059669; padding: 1px;">승인</td>
+                        <td style="border: 1px solid #cbd5e1; vertical-align: middle; font-weight: bold; color: #059669; padding: 1px;">승인</td>
+                        <td style="border: 1px solid #cbd5e1; vertical-align: middle; font-weight: bold; color: #059669; padding: 1px;">승인</td>
+                    </tr>
+                </table>
+            </div>
+
+            <h3 class="font-bold text-xs pt-1">■ TBM 필수 점검 및 참석자 서명</h3>
+            <div id="pdf-tbm-checklist-box" class="text-xs text-slate-700 bg-slate-50 p-2.5 border rounded space-y-1 mb-1"></div>
+            <div id="pdf-tbm-workers-list" class="text-xs text-slate-700 bg-slate-50 p-2.5 border rounded space-y-1"></div>
+            <h3 class="font-bold text-xs pt-1">■ TBM 현장 사진 및 특이사항</h3>
+            <div id="pdf-tbm-photo-container" class="text-center"></div>
+            <div id="pdf-tbm-notes" class="p-2 border bg-slate-50 text-xs"></div>
+        </div>
+
+        <!-- KRAS 위험성평가서 PDF 출력용 양식 -->
+        <div id="printable-kras-pdf" class="p-8 bg-white text-slate-900 text-xs space-y-3 font-sans" style="width: 210mm;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 6px;">
+                <div>
+                    <h1 class="text-lg font-bold">승강기 안전관리 위험성평가표</h1>
+                    <p class="text-[11px] text-slate-500 mt-0.5">에프엠엘지엘리베이터㈜ 안전관리팀</p>
+                </div>
+            </div>
+
+            <!-- 현장정보 바로 아래 미니 콤팩트 결재 서명란 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                <table class="w-2/3 border-collapse border border-slate-400 text-center text-xs">
+                    <tr class="bg-slate-100 font-bold">
+                        <td class="border border-slate-400 p-1.5 w-1/6">현장명</td>
+                        <td id="pdf-kras-site" class="border border-slate-400 p-1.5 w-2/6"></td>
+                        <td class="border border-slate-400 p-1.5 w-1/6">평가일자</td>
+                        <td id="pdf-kras-date" class="border border-slate-400 p-1.5 w-2/6"></td>
+                    </tr>
+                    <tr class="bg-slate-100 font-bold">
+                        <td class="border border-slate-400 p-1.5">대분류</td>
+                        <td colspan="3" id="pdf-kras-cat-title" class="border border-slate-400 p-1.5 text-left font-bold text-blue-900"></td>
+                    </tr>
+                </table>
+                <table style="border-collapse: collapse; text-align: center; font-size: 9px; width: 220px; border: 1px solid #94a3b8;">
+                    <tr style="background-color: #f1f5f9; font-weight: bold;">
+                        <td style="border: 1px solid #cbd5e1; padding: 2px;">평가담당</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 2px;">참석근로자</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 2px;">현장소장</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 2px;">대표이사</td>
+                    </tr>
+                    <tr style="height: 30px;">
+                        <td style="border: 1px solid #cbd5e1; vertical-align: middle; text-align: center; padding: 1px;" id="pdf-kras-sign-evaluator">담당</td>
+                        <td style="border: 1px solid #cbd5e1; vertical-align: middle; text-align: center; padding: 1px;" id="pdf-kras-sign-worker">참석</td>
+                        <td style="border: 1px solid #cbd5e1; vertical-align: middle; font-weight: bold; color: #059669; padding: 1px;">승인</td>
+                        <td style="border: 1px solid #cbd5e1; vertical-align: middle; font-weight: bold; color: #059669; padding: 1px;">승인</td>
+                    </tr>
+                </table>
+            </div>
+
+            <h3 class="font-bold text-xs pt-1">■ KRAS 3x3 위험성평가 상세 내역</h3>
+            <table class="w-full border-collapse border border-slate-400 text-center text-xs">
+                <thead>
+                    <tr class="bg-slate-100 font-bold">
+                        <th class="border border-slate-400 p-1.5 w-1/6">공정명</th>
+                        <th class="border border-slate-400 p-1.5 w-1/6">세부작업명</th>
+                        <th class="border border-slate-400 p-1.5 w-1/4">유해·위험요인 파악</th>
+                        <th class="border border-slate-400 p-1.5 w-10">빈도</th>
+                        <th class="border border-slate-400 p-1.5 w-10">강도</th>
+                        <th class="border border-slate-400 p-1.5 w-10">위험도</th>
+                        <th class="border border-slate-400 p-1.5">안전보건조치 및 개선대책 (복수선택)</th>
+                        <th class="border border-slate-400 p-1.5 w-10">개선후</th>
+                    </tr>
+                </thead>
+                <tbody id="pdf-kras-rows"></tbody>
+            </table>
+            <div id="pdf-kras-signatures-box" class="pt-1 text-xs text-slate-700"></div>
+        </div>
+
+        <!-- 경비청구서 인쇄용 양식 -->
+        <div id="printable-expense-pdf" class="p-8 bg-white text-slate-900 text-xs space-y-4 font-sans" style="width: 210mm;">
+            <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px;">
+                <h1 class="text-xl font-bold">개인사용비용 지출결의서 (청구서)</h1>
+                <p class="text-xs text-slate-500 mt-1">에프엠엘지엘리베이터㈜</p>
+            </div>
+            <table class="w-full border-collapse border border-slate-400 text-xs text-center">
+                <tr class="bg-slate-100 font-bold">
+                    <td class="border border-slate-400 p-2">기안일자</td>
+                    <td id="pdf-exp-claim-date" class="border border-slate-400 p-2"></td>
+                    <td class="border border-slate-400 p-2">부서명</td>
+                    <td id="pdf-exp-dept" class="border border-slate-400 p-2"></td>
+                </tr>
+                <tr class="bg-slate-100 font-bold">
+                    <td class="border border-slate-400 p-2">기안자</td>
+                    <td id="pdf-exp-author" class="border border-slate-400 p-2"></td>
+                    <td class="border border-slate-400 p-2">지급받는 자</td>
+                    <td id="pdf-exp-payee" class="border border-slate-400 p-2"></td>
+                </tr>
+            </table>
+            <h3 class="font-bold text-sm pt-2">■ 지출 상세 내역</h3>
+            <table class="w-full border-collapse border border-slate-400 text-center text-xs">
+                <thead>
+                    <tr class="bg-slate-100 font-bold">
+                        <th class="border border-slate-400 p-2">사용일자</th>
+                        <th class="border border-slate-400 p-2">계정과목</th>
+                        <th class="border border-slate-400 p-2">증빙종류</th>
+                        <th class="border border-slate-400 p-2">사용내역 상세</th>
+                        <th class="border border-slate-400 p-2">금액 (원)</th>
+                    </tr>
+                </thead>
+                <tbody id="pdf-exp-rows"></tbody>
+            </table>
+            <div class="text-right font-bold text-sm pt-2">
+                총 청구 금액: <span id="pdf-exp-total" class="text-blue-600">0 원</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Engine -->
     <script>
+        const db = new Dexie('ElevatorRiskAppDB_v46');
+        db.version(1).stores({
+            items: '++id, category, processName, step, hazard, likelihood, severity, actionPlan, afterLikelihood, afterSeverity',
+            workers: '++id, name',
+            reports: '++id, type, siteName, workDate, tbmTime, processName, tbmLeader, author, workersList, notes, riskSummary, photo, createdAt',
+            masterChecklist: '++id, text',
+            notices: '++id, title, content, date, author',
+            expenses: '++id, claimDate, dept, author, payee, items, totalAmount, status, payDate, approvedDate, paidDate, createdAt',
+            contacts: '++id, name, dept, phone, role'
+        });
+
         const DEFAULT_USERS = [
-            { username: 'admin@fmlg.co.kr', password: '123', name: '관리자 (홍길동)', dept: '안전관리부', status: 'approved', role: 'admin', createdAt: '2026-08-01 09:00', approvedAt: '2026-08-01 09:00' },
-            { username: 'kim@fmlg.co.kr', password: '123', name: '김안전 (작업자)', dept: '유지관리1팀', status: 'approved', role: 'user', createdAt: '2026-08-05 10:30', approvedAt: '2026-08-05 11:00' }
+            { username: 'admin@fmlg.co.kr', password: '123', name: '홍길동', rank: '부장', dept: '안전관리부', status: 'approved', role: 'admin' },
+            { username: 'kim@fmlg.co.kr', password: '123', name: '김철수', rank: '과장', dept: '유지관리1팀', status: 'approved', role: 'user' }
         ];
+
+        const DEFAULT_CONTACTS = [
+            { name: '홍길동', dept: '안전관리부', phone: '010-1111-2222', role: '부장 / 총괄관리' },
+            { name: '김철수', dept: '유지관리1팀', phone: '010-3333-4444', role: '과장 / 현장소장' },
+            { name: '이영희', dept: '설치공사팀', phone: '010-5555-6666', role: '대리 / 공사감독' }
+        ];
+
+        const ELEVATOR_KRAS_HIERARCHY = [
+            {
+                category: "승강기점검",
+                processes: [
+                    {
+                        processName: "기계실 점검",
+                        steps: [
+                            {
+                                step: "제어반 점검",
+                                hazards: [
+                                    {
+                                        hazard: "1. 제어반 점검 시 부주의로 인한 쇼트, 감전",
+                                        likelihood: 1, severity: 3,
+                                        actions: [
+                                            "1) 제어반 작업시 반드시 절연 장갑 및 안전화, 안전모 착용 등",
+                                            "2) 작업 전 메인 전원 차단 및 LOTO(잠금장치) 설치"
+                                        ]
+                                    },
+                                    {
+                                        hazard: "2. 기계실 내 분전반의 커버 미부착으로 인하여 동력선 연결부위가 노출되어 감전",
+                                        likelihood: 2, severity: 3,
+                                        actions: [
+                                            "1) 분전반 절연 커버 즉시 장착",
+                                            "2) 노출 전선 절연 테이프 마감 및 점검"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                step: "권상기 점검",
+                                hazards: [
+                                    {
+                                        hazard: "권상기 오일 누유 및 회전부 접촉에 의한 끼임 및 미끄러짐",
+                                        likelihood: 2, severity: 2,
+                                        actions: [
+                                            "1) 바닥 누유 즉시 흡착포로 제거 및 청결 유지",
+                                            "2) 회전부 방호울 및 경고 표지 확인"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                step: "브레이크 조정",
+                                hazards: [
+                                    {
+                                        hazard: "브레이크 간격 조정 중 카 밀림 및 회전체 협착 위험",
+                                        likelihood: 1, severity: 3,
+                                        actions: [
+                                            "1) 수동 조작 시 비상정지스위치 및 주전원 차단 확인",
+                                            "2) 2인 1조 작업 수행"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                step: "로프, 시브 점검",
+                                hazards: [
+                                    {
+                                        hazard: "로프 소선 단련 및 시브 마모 점검 중 협착 및 낙하물 피격",
+                                        likelihood: 2, severity: 2,
+                                        actions: [
+                                            "1) 회전 중 로프 접촉 절대 금지",
+                                            "2) 안전모 및 안전대 착용"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                step: "청소",
+                                hazards: [
+                                    {
+                                        hazard: "기계실 바닥 청소 중 폐기물 및 오일에 의한 미끄러짐",
+                                        likelihood: 2, severity: 1,
+                                        actions: [
+                                            "1) 미끄럼 방지 전용 장화 착용",
+                                            "2) 청소용구 정리정돈 철저"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        processName: "카상부 점검",
+                        steps: [
+                            {
+                                step: "카 상부(Car Top) 탑승 및 주행",
+                                hazards: [
+                                    {
+                                        hazard: "카 상부 탑승 후 점검 중 승강로 추락 위험",
+                                        likelihood: 2, severity: 3,
+                                        actions: [
+                                            "1) 안전대 안전걸이 승강로 구조물에 확실히 체결",
+                                            "2) 점검용 조작반(T/C) 정상 작동 확인"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        processName: "승강로 점검",
+                        steps: [
+                            {
+                                step: "승강로 내부 및 가이드레일 점검",
+                                hazards: [
+                                    {
+                                        hazard: "승강로 조명 미비로 인한 시야 불량 및 추락",
+                                        likelihood: 2, severity: 2,
+                                        actions: [
+                                            "1) 휴대용 조명등 및 안전모 필수 착용",
+                                            "2) 추락 방지 안전망 설치 확인"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        processName: "피트 점검",
+                        steps: [
+                            {
+                                step: "피트(Pit) 내부 진입 및 완충기 확인",
+                                hazards: [
+                                    {
+                                        hazard: "피트 하부 습기 및 고인 물로 인한 감전 및 미끄러짐",
+                                        likelihood: 1, severity: 2,
+                                        actions: [
+                                            "1) 누전차단기 작동 확인 및 방수 안전화 착용",
+                                            "2) 휴대용 랜턴 지참"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                category: "승강기고장수리",
+                processes: [
+                    {
+                        processName: "도어 인터록 수리",
+                        steps: [
+                            {
+                                step: "도어 인터록 스위치 수리",
+                                hazards: [
+                                    {
+                                        hazard: "카 문 개방 상태에서 작업 중 승강로 추락 위험",
+                                        likelihood: 2, severity: 3,
+                                        actions: [
+                                            "1) 카 바리케이드 및 추락 방지 안전 울타리 설치",
+                                            "2) 메인 전원 차단"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                category: "승강기부품교체",
+                processes: [
+                    {
+                        processName: "로프 교체공사",
+                        steps: [
+                            {
+                                step: "메인 주로프 교체 공사",
+                                hazards: [
+                                    {
+                                        hazard: "중량물 인양 중 장력 해제에 따른 튕김 및 낙하",
+                                        likelihood: 2, severity: 3,
+                                        actions: [
+                                            "1) 체인블록 및 로프 그립 안전인증품 사용",
+                                            "2) 하부 출입 통제원 배치"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                category: "승강기공사",
+                processes: [
+                    {
+                        processName: "레일 설치공사",
+                        steps: [
+                            {
+                                step: "가이드레일 브래킷 용접 및 설치",
+                                hazards: [
+                                    {
+                                        hazard: "용접 불꽃 비산에 따른 화재 및 안구 화상",
+                                        likelihood: 2, severity: 2,
+                                        actions: [
+                                            "1) 용접용 보안면 및 방염 가죽 장갑 착용",
+                                            "2) 인근 가연물 제거 및 소화기 비치"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        let currentUser = null;
+        let tbmPhotoData = null;
+        let signaturePadsInstances = {};
+        let krasEvaluatorSigPad = null;
+        let krasWorkersSigPads = [];
 
         function getUsersList() {
             try {
                 const stored = localStorage.getItem('fmlg_users_db');
-                if (stored) {
-                    const parsed = JSON.parse(stored);
-                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-                }
-            } catch (e) { console.error(e); }
+                if (stored) return JSON.parse(stored);
+            } catch (e) {}
             localStorage.setItem('fmlg_users_db', JSON.stringify(DEFAULT_USERS));
             return DEFAULT_USERS;
         }
 
         function saveUsersList(list) {
-            try { localStorage.setItem('fmlg_users_db', JSON.stringify(list)); } catch(e){}
+            localStorage.setItem('fmlg_users_db', JSON.stringify(list));
         }
 
-        let currentUser = null;
-
-        window.addEventListener('DOMContentLoaded', () => {
-            getUsersList();
-            checkInitialNoticeAndAuth();
+        window.addEventListener('DOMContentLoaded', async () => {
             const today = new Date().toISOString().split('T')[0];
-            const claimInput = document.getElementById('exp-claim-date');
-            if (claimInput) claimInput.value = today;
+            document.getElementById('tbm-work-date').value = today;
+            document.getElementById('kras-work-date').value = today;
+
+            if (await db.items.count() === 0) {
+                await db.items.add({
+                    category: "승강기점검",
+                    processName: "기계실 점검",
+                    step: "제어반 점검",
+                    hazard: "1. 제어반 점검 시 부주의로 인한 쇼트, 감전",
+                    likelihood: 1, severity: 3,
+                    actionPlan: "1) 제어반 작업시 반드시 절연 장갑 및 안전화, 안전모 착용 등\n2) 작업 전 메인 전원 차단 및 LOTO(잠금장치) 설치",
+                    afterLikelihood: 1, afterSeverity: 2
+                });
+            }
+            if (await db.workers.count() === 0) {
+                await db.workers.bulkAdd([{ name: '홍길동 (부장)' }, { name: '김철수 (과장)' }]);
+            }
+            if (await db.masterChecklist.count() === 0) {
+                await db.masterChecklist.bulkAdd([
+                    { text: "근로자 건강상태 확인 (음주·피로·혈압)" },
+                    { text: "개인보호구 착용 점검 (안전모·절연장갑·안전대)" },
+                    { text: "작업구역 출입통제 및 바리케이드 설치" }
+                ]);
+            }
+            if (await db.contacts.count() === 0) {
+                await db.contacts.bulkAdd(DEFAULT_CONTACTS);
+            }
+
+            checkLoginSession();
+            renderTbmChecklistUI();
+            renderWorkers();
+            renderKrasWorkersInputs();
+            renderRiskCards();
+            renderMasterChecklist();
+            renderAdminUserList();
+            renderSavedExpenseReports();
+            renderAdminApprovalQueue();
+            renderNotices();
+            renderEmergencyContacts();
+
+            document.getElementById('exp-claim-date').value = today;
+            document.getElementById('admin-batch-approved-date').value = today;
+            document.getElementById('admin-batch-paydate').value = today;
+            document.getElementById('admin-batch-paid-date').value = today;
+
             addExpenseRow();
         });
 
-        function checkInitialNoticeAndAuth() {
-            checkLoginSession();
-        }
-
-        function closeNoticeModal() {
-            document.getElementById('notice-modal').classList.add('hidden');
-            checkLoginSession();
-        }
-
         function checkLoginSession() {
-            try {
-                const savedUser = localStorage.getItem('fmlg_current_user');
-                if (savedUser) {
-                    currentUser = JSON.parse(savedUser);
-                    document.getElementById('auth-modal').classList.add('hidden');
-                    updateMasterEmployeeList();
-                    renderProfileTab();
-                    const expAuthor = document.getElementById('exp-author');
-                    if (expAuthor && currentUser) expAuthor.value = currentUser.name;
-                    return;
+            const savedUser = localStorage.getItem('fmlg_current_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById('auth-modal').classList.add('hidden');
+                const fullNameRank = `${currentUser.name} ${currentUser.rank || ''}`;
+                document.getElementById('user-display-name').textContent = fullNameRank;
+                document.getElementById('profile-name').textContent = fullNameRank;
+                document.getElementById('profile-dept').textContent = `에프엠엘지엘리베이터㈜ / ${currentUser.dept}`;
+                
+                const tbmLeader = document.getElementById('tbm-leader');
+                const krasEval = document.getElementById('kras-evaluator');
+                if (tbmLeader) tbmLeader.value = fullNameRank;
+                if (krasEval) krasEval.value = fullNameRank;
+
+                const expAuthor = document.getElementById('exp-author');
+                const expPayee = document.getElementById('exp-payee');
+                if (expAuthor) expAuthor.value = fullNameRank;
+                if (expPayee) expPayee.value = currentUser.name;
+
+                const adminTab = document.getElementById('tab-admin');
+                const usersTab = document.getElementById('tab-users');
+                if (currentUser.role === 'admin') {
+                    if (adminTab) adminTab.classList.remove('hidden');
+                    if (usersTab) usersTab.classList.remove('hidden');
+                } else {
+                    if (adminTab) adminTab.classList.add('hidden');
+                    if (usersTab) usersTab.classList.add('hidden');
                 }
-            } catch(e) {}
-            document.getElementById('auth-modal').classList.remove('hidden');
-        }
-
-        function toggleAuthMode(mode) {
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('signup-form').classList.add('hidden');
-            document.getElementById('find-form').classList.add('hidden');
-
-            document.getElementById('auth-tab-login').className = "flex-1 py-2 text-center text-slate-400 border-b-2 border-transparent";
-            document.getElementById('auth-tab-signup').className = "flex-1 py-2 text-center text-slate-400 border-b-2 border-transparent";
-            document.getElementById('auth-tab-find').className = "flex-1 py-2 text-center text-slate-400 border-b-2 border-transparent";
-
-            if (mode === 'signup') {
-                document.getElementById('signup-form').classList.remove('hidden');
-                document.getElementById('auth-tab-signup').className = "flex-1 py-2 text-center text-blue-600 border-b-2 border-blue-600 font-bold";
-            } else if (mode === 'find') {
-                document.getElementById('find-form').classList.remove('hidden');
-                document.getElementById('auth-tab-find').className = "flex-1 py-2 text-center text-blue-600 border-b-2 border-blue-600 font-bold";
             } else {
-                document.getElementById('login-form').classList.remove('hidden');
-                document.getElementById('auth-tab-login').className = "flex-1 py-2 text-center text-blue-600 border-b-2 border-blue-600 font-bold";
+                document.getElementById('auth-modal').classList.remove('hidden');
             }
         }
 
         function handleLogin() {
             const id = document.getElementById('login-id').value.trim();
             const pw = document.getElementById('login-pw').value.trim();
-
-            if (!id || !pw) return alert("아이디와 비밀번호를 모두 입력해주세요.");
-
-            const users = getUsersList();
-            const user = users.find(u => u.username === id && u.password === pw);
-
-            if (!user) return alert("아이디 또는 비밀번호가 일치하지 않습니다.\n(기본 계정: admin@fmlg.co.kr / 비밀번호: 123)");
-            if (user.status === 'pending') return alert("⏳ 가입 승인 대기 중인 계정입니다.");
-            if (user.status === 'retired') return alert("⛔ 퇴사 처리된 계정입니다.");
-
+            const user = getUsersList().find(u => u.username === id && u.password === pw);
+            if (!user) return alert("아이디 또는 비밀번호가 올바르지 않습니다.");
             currentUser = user;
             localStorage.setItem('fmlg_current_user', JSON.stringify(user));
             document.getElementById('auth-modal').classList.add('hidden');
-            alert("✅ " + user.name + "님 환영합니다!");
-            updateMasterEmployeeList();
-            renderProfileTab();
-            const expAuthor = document.getElementById('exp-author');
-            if (expAuthor) expAuthor.value = currentUser.name;
-        }
-
-        function handleSignUp() {
-            const name = document.getElementById('signup-name').value.trim();
-            const id = document.getElementById('signup-id').value.trim();
-            const pw = document.getElementById('signup-pw').value.trim();
-            const dept = document.getElementById('signup-dept').value.trim() || '승강기유지관리부';
-
-            if (!name || !id || !pw) return alert("이름, 아이디, 비밀번호를 모두 입력해주세요.");
-
-            const users = getUsersList();
-            if (users.some(u => u.username === id)) return alert("이미 등록된 아이디입니다.");
-
-            const newUser = { username: id, password: pw, name: name, dept: dept, status: 'pending', role: 'user', createdAt: new Date().toISOString() };
-            users.push(newUser);
-            saveUsersList(users);
-
-            alert("가입 신청이 접수되었습니다! 관리자 승인 후 로그인해 주세요.");
-            toggleAuthMode('login');
+            checkLoginSession();
         }
 
         function handleLogout() {
             if (confirm("로그아웃하시겠습니까?")) {
                 localStorage.removeItem('fmlg_current_user');
                 currentUser = null;
-                document.getElementById('auth-modal').classList.remove('hidden');
-                document.getElementById('user-display-name').textContent = "로그인 필요";
+                document.getElementById('auth-modal').classList.add('hidden');
             }
         }
 
         function switchTab(tab) {
+            if ((tab === 'admin' || tab === 'users') && currentUser && currentUser.role !== 'admin') {
+                return alert("관리자 권한만 접근할 수 있습니다.");
+            }
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
-            const sec = document.getElementById(`sec-${tab}`);
-            const btn = document.getElementById(`tab-${tab}`);
-            if (sec) sec.classList.remove('hidden');
-            if (btn) btn.classList.add('active');
+            document.getElementById(`sec-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            if (tab === 'kras') {
+                setTimeout(initKrasSignatures, 100);
+            }
+            if (tab === 'search') searchHistoryRecords();
+            if (tab === 'notice') renderNotices();
+            if (tab === 'users') renderAdminUserList();
+            if (tab === 'admin') { renderAdminApprovalQueue(); renderSavedExpenseReports(); }
+            if (tab === 'master') renderMasterChecklist();
+            if (tab === 'contacts') renderEmergencyContacts();
         }
 
-        const CATEGORY_HAZARD_DB = {
-            "[승강기 점검]": [
-                { sub: "기계실 및 CP/INV 정기점검", hazard: "제어반 내부 점검 중 감전", action: "▷ 절연장갑 착용 ▷ 수동운전 전환" }
-            ]
-        };
+        function updateMyPassword() {
+            const currentPw = document.getElementById('my-current-pw').value.trim();
+            const newPw = document.getElementById('my-new-pw').value.trim();
+            const newPwCheck = document.getElementById('my-new-pw-check').value.trim();
 
-        function getMasterHazardDb() { return CATEGORY_HAZARD_DB; }
-        function renderMasterHazardDbList() {}
-        function updateMasterEmployeeList() {}
-        function renderProfileTab() {
-            if (currentUser) {
-                document.getElementById('user-display-name').textContent = currentUser.name;
-                document.getElementById('profile-name').textContent = currentUser.name;
-                document.getElementById('profile-dept').textContent = '에프엠엘지 / ' + currentUser.dept;
+            if (!currentPw || !newPw || !newPwCheck) return alert("모든 비밀번호 항목을 입력해주세요.");
+            if (currentUser.password !== currentPw) return alert("현재 비밀번호가 일치하지 않습니다.");
+            if (newPw !== newPwCheck) return alert("새 비밀번호와 확인란이 일치하지 않습니다.");
+
+            let users = getUsersList();
+            let idx = users.findIndex(u => u.username === currentUser.username);
+            if (idx !== -1) {
+                users[idx].password = newPw;
+                saveUsersList(users);
+                currentUser.password = newPw;
+                localStorage.setItem('fmlg_current_user', JSON.stringify(currentUser));
+                alert("✅ 비밀번호가 성공적으로 변경되었습니다.");
+                document.getElementById('my-current-pw').value = '';
+                document.getElementById('my-new-pw').value = '';
+                document.getElementById('my-new-pw-check').value = '';
+            } else {
+                alert("사용자 정보를 찾을 수 없습니다.");
             }
         }
 
-        const db = new Dexie('ElevatorRiskAppDB_v5');
-        db.version(1).stores({
-            items: '++id, step, hazard, likelihood, severity, actionPlan, photo',
-            workers: '++id, name, sigData',
-            reports: '++id, siteName, workDate, tbmTime, processName, tbmLeader, author, workersList, notes, createdAt',
-            expenses: '++id, claimDate, dept, author, items, totalAmount, createdAt'
-        });
+        function renderAdminUserList() {
+            const container = document.getElementById('admin-user-list');
+            if (!container) return;
+            let users = getUsersList();
+            container.innerHTML = users.map((u, idx) => `
+                <div class="p-3 border rounded-xl bg-slate-50 text-xs space-y-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
+                        <div><label class="block text-[10px] text-slate-500 font-bold">이름</label><input type="text" id="edit-name-${idx}" value="${u.name || ''}" class="border rounded p-1.5 w-full bg-white font-bold"></div>
+                        <div><label class="block text-[10px] text-slate-500 font-bold">직급</label><input type="text" id="edit-rank-${idx}" value="${u.rank || ''}" class="border rounded p-1.5 w-full bg-white"></div>
+                        <div><label class="block text-[10px] text-slate-500 font-bold">아이디 (이메일)</label><input type="text" id="edit-id-${idx}" value="${u.username || ''}" class="border rounded p-1.5 w-full bg-white font-bold text-blue-900"></div>
+                        <div><label class="block text-[10px] text-slate-500 font-bold">비밀번호 변경</label><input type="text" id="edit-pw-${idx}" value="${u.password || ''}" class="border rounded p-1.5 w-full bg-white text-rose-600 font-bold"></div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-1">
+                        <button onclick="saveUserChanges(${idx})" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded shadow-sm">수정 저장</button>
+                        ${u.role !== 'admin' ? `<button onclick="deleteUserRecord(${idx})" class="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1 rounded">삭제</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
 
-        let sigPads = {};
+        function registerUserByAdmin() {
+            const name = document.getElementById('admin-add-name').value.trim();
+            const rank = document.getElementById('admin-add-rank').value.trim();
+            const id = document.getElementById('admin-add-id').value.trim();
+            const pw = document.getElementById('admin-add-pw').value.trim();
+            if (!name || !id) return alert("이름과 아이디를 모두 입력해주세요.");
+            let users = getUsersList();
+            if (users.some(u => u.username === id)) return alert("이미 존재하는 아이디입니다.");
+            users.push({ username: id, password: pw || '123', name, rank, dept: '승강기유지관리팀', status: 'approved', role: 'user' });
+            saveUsersList(users);
+            renderAdminUserList();
+            document.getElementById('admin-add-name').value = '';
+            document.getElementById('admin-add-rank').value = '';
+            document.getElementById('admin-add-id').value = '';
+            alert("✅ 신규 회원이 등록되었습니다.");
+        }
 
-        function renderTbmChecklistUI() {}
-        function renderAdminChecklistManager() {}
+        function saveUserChanges(idx) {
+            let users = getUsersList();
+            const newName = document.getElementById(`edit-name-${idx}`).value.trim();
+            const newRank = document.getElementById(`edit-rank-${idx}`).value.trim();
+            const newId = document.getElementById(`edit-id-${idx}`).value.trim();
+            const newPw = document.getElementById(`edit-pw-${idx}`).value.trim();
 
-        // --- 경비 청구 모듈 기능 ---
+            if (!newName || !newId) return alert("이름과 아이디는 비워둘 수 없습니다.");
+            users[idx].name = newName;
+            users[idx].rank = newRank;
+            users[idx].username = newId;
+            users[idx].password = newPw;
+
+            saveUsersList(users);
+            renderAdminUserList();
+            alert("✅ 회원 정보가 성공적으로 수정되었습니다.");
+        }
+
+        function deleteUserRecord(idx) {
+            if (confirm("정말 이 회원을 삭제하시겠습니까?")) {
+                let users = getUsersList();
+                users.splice(idx, 1);
+                saveUsersList(users);
+                renderAdminUserList();
+            }
+        }
+
+        async function renderEmergencyContacts() {
+            const container = document.getElementById('contacts-list');
+            if (!container) return;
+            const query = document.getElementById('contact-search') ? document.getElementById('contact-search').value.toLowerCase() : '';
+            let contacts = await db.contacts.toArray();
+
+            let filtered = contacts.filter(c => !query || c.name.toLowerCase().includes(query) || c.dept.toLowerCase().includes(query));
+
+            container.innerHTML = filtered.length === 0 ? '<div class="p-4 text-center text-xs text-slate-400">등록된 비상연락망 없음</div>' : '';
+            filtered.forEach(c => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="p-3 border rounded-xl bg-slate-50 text-xs flex justify-between items-center">
+                        <div class="space-y-0.5">
+                            <div class="font-bold text-slate-800 text-sm">${c.name} <span class="text-blue-600 font-normal">(${c.role || '직원'})</span></div>
+                            <div class="text-slate-500">소속: ${c.dept} | ☎ <a href="tel:${c.phone}" class="text-blue-600 font-bold">${c.phone}</a></div>
+                        </div>
+                        <button onclick="deleteContact(${c.id})" class="text-rose-500 font-bold px-2 py-1"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `);
+            });
+        }
+
+        async function addEmergencyContact() {
+            const name = document.getElementById('contact-name').value.trim();
+            const dept = document.getElementById('contact-dept').value.trim();
+            const phone = document.getElementById('contact-phone').value.trim();
+            const role = document.getElementById('contact-role').value.trim();
+
+            if (!name || !phone) return alert("이름과 전화번호를 입력해주세요.");
+            await db.contacts.add({ name, dept, phone, role });
+            document.getElementById('contact-name').value = '';
+            document.getElementById('contact-dept').value = '';
+            document.getElementById('contact-phone').value = '';
+            document.getElementById('contact-role').value = '';
+            renderEmergencyContacts();
+            alert("✅ 비상연락망에 등록되었습니다.");
+        }
+
+        async function deleteContact(id) {
+            if (confirm("연락망에서 삭제하시겠습니까?")) {
+                await db.contacts.delete(id);
+                renderEmergencyContacts();
+            }
+        }
+
+        async function renderWorkers() {
+            const container = document.getElementById('workers-container');
+            if (!container) return;
+            let workers = await db.workers.toArray();
+            container.innerHTML = '';
+            signaturePadsInstances = {};
+
+            workers.forEach(w => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="p-2 border rounded bg-slate-50 text-xs space-y-1 relative">
+                        <button onclick="deleteWorkerCard(${w.id})" class="absolute top-1 right-2 text-rose-500 font-bold text-[10px]">삭제</button>
+                        <div class="font-bold text-slate-800">${w.name}</div>
+                        <div class="flex justify-between items-center text-[10px] text-slate-400">
+                            <span>서명 란</span>
+                            <button onclick="clearWorkerSig(${w.id})" class="text-slate-600 font-bold">지우기</button>
+                        </div>
+                        <canvas id="sig-${w.id}" class="sig-pad w-full h-16"></canvas>
+                    </div>
+                `);
+            });
+
+            setTimeout(() => {
+                workers.forEach(w => {
+                    let canvas = document.getElementById(`sig-${w.id}`);
+                    if (canvas) {
+                        canvas.width = canvas.offsetWidth;
+                        canvas.height = canvas.offsetHeight;
+                        signaturePadsInstances[w.id] = new SignaturePad(canvas);
+                    }
+                });
+            }, 100);
+        }
+
+        async function addWorkerCard() {
+            let name = prompt("참석자 성명(직급):");
+            if (name) {
+                await db.workers.add({ name });
+                renderWorkers();
+            }
+        }
+
+        async function deleteWorkerCard(id) {
+            await db.workers.delete(id);
+            renderWorkers();
+        }
+
+        function clearWorkerSig(id) {
+            if (signaturePadsInstances[id]) {
+                signaturePadsInstances[id].clear();
+            }
+        }
+
+        let krasWorkerInputsCount = 0;
+        function renderKrasWorkersInputs() {
+            const container = document.getElementById('kras-workers-sig-container');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="p-2 border rounded bg-slate-50 space-y-1 relative kras-worker-row">
+                    <input type="text" placeholder="참석 근로자 성명" value="김철수 (과장)" class="w-full border p-1 rounded font-bold text-xs kras-worker-name-input">
+                    <div class="flex justify-between items-center text-[10px] text-slate-400">
+                        <span>근로자 서명</span>
+                        <button onclick="this.closest('.kras-worker-row').querySelector('canvas').signaturePadInstance.clear()" class="text-slate-600 font-bold">지우기</button>
+                    </div>
+                    <canvas class="sig-pad w-full h-14 kras-w-sig-canvas"></canvas>
+                </div>
+            `;
+            setTimeout(initKrasSignatures, 50);
+        }
+
+        function addKrasWorkerInput() {
+            const container = document.getElementById('kras-workers-sig-container');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = "p-2 border rounded bg-slate-50 space-y-1 relative kras-worker-row";
+            div.innerHTML = `
+                <button onclick="this.closest('.kras-worker-row').remove()" class="absolute top-1 right-2 text-rose-500 font-bold text-[10px]">삭제</button>
+                <input type="text" placeholder="참석 근로자 성명" class="w-full border p-1 rounded font-bold text-xs kras-worker-name-input">
+                <div class="flex justify-between items-center text-[10px] text-slate-400">
+                    <span>근로자 서명</span>
+                    <button onclick="this.closest('.kras-worker-row').querySelector('canvas').signaturePadInstance.clear()" class="text-slate-600 font-bold">지우기</button>
+                </div>
+                <canvas class="sig-pad w-full h-14 kras-w-sig-canvas"></canvas>
+            `;
+            container.appendChild(div);
+            setTimeout(() => {
+                const canvas = div.querySelector('canvas');
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                canvas.signaturePadInstance = new SignaturePad(canvas);
+            }, 50);
+        }
+
+        function initKrasSignatures() {
+            const evalCanvas = document.getElementById('kras-eval-sig-canvas');
+            if (evalCanvas && !krasEvalSigPad) {
+                evalCanvas.width = evalCanvas.offsetWidth;
+                evalCanvas.height = evalCanvas.offsetHeight;
+                krasEvaluatorSigPad = new SignaturePad(evalCanvas);
+            }
+            document.querySelectorAll('.kras-w-sig-canvas').forEach(canvas => {
+                if (!canvas.signaturePadInstance) {
+                    canvas.width = canvas.offsetWidth;
+                    canvas.height = canvas.offsetHeight;
+                    canvas.signaturePadInstance = new SignaturePad(canvas);
+                }
+            });
+        }
+
+        async function openTbmPreviewModal() {
+            const siteName = document.getElementById('tbm-site-name').value;
+            const workDate = document.getElementById('tbm-work-date').value;
+            const tbmTime = document.getElementById('tbm-time').value;
+            const processName = document.getElementById('tbm-process-name').value;
+            const tbmLeader = document.getElementById('tbm-leader').value;
+            const notes = document.getElementById('tbm-notes').value;
+
+            let checklistItems = await db.masterChecklist.toArray();
+            let checkListHtml = checklistItems.map(c => `<div>[✔] ${c.text}</div>`).join('');
+            
+            let workers = await db.workers.toArray();
+            let workersHtml = workers.map(w => {
+                let pad = signaturePadsInstances[w.id];
+                let sigImg = (pad && !pad.isEmpty()) ? pad.toDataURL() : '';
+                return `<div class="inline-block border p-2 m-1 rounded bg-white text-center"><div class="font-bold">${w.name}</div>${sigImg ? `<img src="${sigImg}" class="h-10 mx-auto mt-1 border">` : '<span class="text-slate-300 text-[10px]">서명없음</span>'}</div>`;
+            }).join('');
+
+            document.getElementById('preview-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-blue-600"></i> TBM 보고서 상세 미리보기`;
+            document.getElementById('report-preview-content').innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border">
+                        <div><b>현장명:</b> ${siteName}</div>
+                        <div><b>작업일자:</b> ${workDate} (${tbmTime})</div>
+                        <div><b>공종구분:</b> ${processName}</div>
+                        <div><b>TBM 리더:</b> ${tbmLeader}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1">■ 필수 점검 항목</h4>
+                        <div class="bg-white p-3 rounded-xl border space-y-1">${checkListHtml}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1">■ 참석 근로자 및 서명</h4>
+                        <div class="bg-white p-3 rounded-xl border flex flex-wrap gap-2">${workersHtml || '등록된 근로자 없음'}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1">■ 특이사항</h4>
+                        <div class="bg-white p-3 rounded-xl border">${notes || '없음'}</div>
+                    </div>
+                    ${tbmPhotoData ? `<div><h4 class="font-bold text-slate-700 mb-1">■ 현장 사진</h4><img src="${tbmPhotoData}" class="h-40 rounded-lg border object-cover"></div>` : ''}
+                </div>
+            `;
+            document.getElementById('report-preview-modal').classList.remove('hidden');
+        }
+
+        async function saveTbmDataOffline() {
+            const siteName = document.getElementById('tbm-site-name').value;
+            const workDate = document.getElementById('tbm-work-date').value;
+            const tbmTime = document.getElementById('tbm-time').value;
+            const processName = document.getElementById('tbm-process-name').value;
+            const tbmLeader = document.getElementById('tbm-leader').value;
+            const notes = document.getElementById('tbm-notes').value;
+            const author = currentUser ? `${currentUser.name} ${currentUser.rank || ''}` : '홍길동';
+
+            const workers = await db.workers.toArray();
+            const workersList = workers.map(w => w.name).join(', ');
+
+            await db.reports.add({ type: 'TBM', siteName, workDate, tbmTime, processName, tbmLeader, author, workersList, notes, riskSummary: '-', photo: tbmPhotoData, createdAt: new Date().toISOString() });
+            alert('✅ TBM 보고서가 저장 및 이력 등록되었습니다!');
+        }
+
+        async function generateTbmReportPDF() {
+            const siteName = document.getElementById('tbm-site-name').value;
+            const workDate = document.getElementById('tbm-work-date').value;
+            const processName = document.getElementById('tbm-process-name').value;
+            const tbmLeader = document.getElementById('tbm-leader').value;
+            const notes = document.getElementById('tbm-notes').value;
+            const author = currentUser ? `${currentUser.name} ${currentUser.rank || ''}` : '홍길동';
+
+            document.getElementById('pdf-tbm-site').textContent = siteName;
+            document.getElementById('pdf-tbm-date').textContent = workDate;
+            document.getElementById('pdf-tbm-process').textContent = processName;
+            document.getElementById('pdf-tbm-leader').textContent = tbmLeader;
+            
+            document.getElementById('pdf-tbm-sign-author').innerHTML = `<span style="font-weight:bold;">${author}</span>`;
+            document.getElementById('pdf-tbm-notes').innerHTML = `<b>특이사항:</b> ${notes || '없음'}`;
+
+            let checklistItems = await db.masterChecklist.toArray();
+            document.getElementById('pdf-tbm-checklist-box').innerHTML = checklistItems.map(c => `<div>[✔] ${c.text}</div>`).join('');
+
+            const workers = await db.workers.toArray();
+            let workersBoxHtml = '<div style="font-weight:bold; margin-bottom:4px;">참석 근로자 서명부:</div><div style="display:flex; flex-wrap:wrap; gap:6px;">';
+            workers.forEach(w => {
+                let pad = signaturePadsInstances[w.id];
+                let sigImg = (pad && !pad.isEmpty()) ? pad.toDataURL() : '';
+                workersBoxHtml += `<div style="border:1px solid #cbd5e1; padding:2px 6px; text-align:center; background:#f8fafc; border-radius:4px;"><div style="font-weight:bold; font-size:9px;">${w.name}</div>${sigImg ? `<img src="${sigImg}" style="height:25px; display:block; margin:1px auto;">` : '<span style="color:#94a3b8; font-size:8px;">서명생략</span>'}</div>`;
+            });
+            workersBoxHtml += '</div>';
+            document.getElementById('pdf-tbm-workers-list').innerHTML = workersBoxHtml;
+
+            const photoElem = document.getElementById('pdf-tbm-photo-container');
+            photoElem.innerHTML = tbmPhotoData ? `<img src="${tbmPhotoData}" class="max-h-48 mx-auto rounded border">` : '<span class="text-slate-400">등록된 사진 없음</span>';
+
+            const opt = {
+                margin: 0,
+                filename: `TBM_보고서_${siteName}_${workDate}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(document.getElementById('printable-tbm-pdf')).save();
+        }
+
+        async function onMainCategoryChange() {
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const catObj = ELEVATOR_KRAS_HIERARCHY.find(c => c.category === selectedCat);
+            if (catObj && catObj.processes.length > 0) {
+                const firstProc = catObj.processes[0];
+                const firstStep = firstProc.steps[0];
+                const firstHazard = firstStep.hazards[0];
+                await db.items.clear();
+                await db.items.add({
+                    category: selectedCat,
+                    processName: firstProc.processName,
+                    step: firstStep.step,
+                    hazard: firstHazard.hazard,
+                    likelihood: firstHazard.likelihood,
+                    severity: firstHazard.severity,
+                    actionPlan: firstHazard.actions.join('\n'),
+                    afterLikelihood: 1,
+                    afterSeverity: 2
+                });
+            }
+            renderRiskCards();
+        }
+
+        async function renderRiskCards() {
+            const container = document.getElementById('risk-card-container');
+            if (!container) return;
+            const selectedCat = document.getElementById('kras-main-category').value;
+            
+            let items = await db.items.where('category').equals(selectedCat).toArray();
+            if (items.length === 0) {
+                const catObj = ELEVATOR_KRAS_HIERARCHY.find(c => c.category === selectedCat);
+                if (catObj && catObj.processes.length > 0) {
+                    const p = catObj.processes[0];
+                    const s = p.steps[0];
+                    const h = s.hazards[0];
+                    await db.items.add({
+                        category: selectedCat,
+                        processName: p.processName,
+                        step: s.step,
+                        hazard: h.hazard,
+                        likelihood: h.likelihood,
+                        severity: h.severity,
+                        actionPlan: h.actions.join('\n'),
+                        afterLikelihood: 1,
+                        afterSeverity: 2
+                    });
+                    items = await db.items.where('category').equals(selectedCat).toArray();
+                }
+            }
+
+            container.innerHTML = '';
+            const catObj = ELEVATOR_KRAS_HIERARCHY.find(c => c.category === selectedCat) || { processes: [] };
+
+            items.forEach((item) => {
+                const score = item.likelihood * item.severity;
+                const afterScore = (item.afterLikelihood || 1) * (item.afterSeverity || 2);
+
+                const currentProcObj = catObj.processes.find(p => p.processName === item.processName) || catObj.processes[0] || { steps: [] };
+                let processOptions = catObj.processes.map(p => `<option value="${p.processName}" ${p.processName === item.processName ? 'selected' : ''}>${p.processName}</option>`).join('');
+                let stepOptions = currentProcObj.steps.map(s => `<option value="${s.step}" ${s.step === item.step ? 'selected' : ''}>${s.step}</option>`).join('');
+
+                const currentStepObj = currentProcObj.steps.find(s => s.step === item.step) || currentProcObj.steps[0] || { hazards: [] };
+                let hazardOptions = currentStepObj.hazards.map(hz => `<option value="${hz.hazard}" ${hz.hazard === item.hazard ? 'selected' : ''}>${hz.hazard}</option>`).join('');
+
+                const currentHazardObj = currentStepObj.hazards.find(hz => hz.hazard === item.hazard) || currentStepObj.hazards[0] || { actions: [] };
+
+                let actionCheckboxesHtml = '';
+                if (currentHazardObj.actions && currentHazardObj.actions.length > 0) {
+                    actionCheckboxesHtml = currentHazardObj.actions.map(act => {
+                        let isChecked = item.actionPlan && item.actionPlan.includes(act);
+                        return `
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-1.5 rounded border hover:bg-blue-50">
+                                <input type="checkbox" value="${act}" ${isChecked ? 'checked' : ''} onchange="onActionCheckboxChange(${item.id}, this)" class="rounded text-blue-600">
+                                <span class="text-[11px] text-slate-700">${act}</span>
+                            </label>
+                        `;
+                    }).join('');
+                }
+
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="bg-white p-4 rounded-xl border space-y-3 relative text-xs shadow-sm">
+                        <button onclick="deleteRiskItem(${item.id})" class="absolute top-3 right-3 text-rose-500 font-bold">삭제</button>
+                        
+                        <div>
+                            <label class="block font-bold text-blue-700 mb-1">1) 공정명 선택</label>
+                            <select onchange="onProcessChange(${item.id}, this.value)" class="w-full border rounded p-2 bg-blue-50 font-bold text-slate-800">
+                                ${processOptions}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">2) 세부작업명 선택 (드롭다운 연동)</label>
+                            <select onchange="onStepChange(${item.id}, this.value)" class="w-full border rounded p-2 bg-slate-100 font-bold text-slate-800">
+                                ${stepOptions}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">3) 유해·위험요인 파악 (드롭다운 연동)</label>
+                            <select onchange="onHazardChange(${item.id}, this.value)" class="w-full border rounded p-2 bg-slate-50 font-medium mb-1">
+                                ${hazardOptions}
+                            </select>
+                            <textarea onchange="updateKrasItem(${item.id}, 'hazard', this.value)" class="w-full border rounded p-2 bg-slate-50 h-14" placeholder="유해위험요인 직접 수정">${item.hazard || ''}</textarea>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border text-center">
+                            <div><label class="block text-[10px]">빈도</label><input type="number" value="${item.likelihood}" onchange="updateKrasItem(${item.id}, 'likelihood', parseInt(this.value))" class="w-full border text-center font-bold"></div>
+                            <div><label class="block text-[10px]">강도</label><input type="number" value="${item.severity}" onchange="updateKrasItem(${item.id}, 'severity', parseInt(this.value))" class="w-full border text-center font-bold"></div>
+                            <div><label class="block text-[10px]">현재 위험도</label><span class="font-bold text-blue-600">${score}점</span></div>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">4) 안전보건조치 및 개선대책 (복수 선택 가능)</label>
+                            <div class="space-y-1.5 mb-2">${actionCheckboxesHtml}</div>
+                            <textarea onchange="updateKrasItem(${item.id}, 'actionPlan', this.value)" class="w-full border rounded p-2 bg-slate-50 h-16" placeholder="선택된 대책들이 자동 반영되며 직접 수정도 가능합니다">${item.actionPlan || ''}</textarea>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded border text-center">
+                            <div><label class="block text-[10px]">개선후 빈도</label><input type="number" value="${item.afterLikelihood || 1}" onchange="updateKrasItem(${item.id}, 'afterLikelihood', parseInt(this.value))" class="w-full border text-center font-bold"></div>
+                            <div><label class="block text-[10px]">개선후 강도</label><input type="number" value="${item.afterSeverity || 2}" onchange="updateKrasItem(${item.id}, 'afterSeverity', parseInt(this.value))" class="w-full border text-center font-bold"></div>
+                            <div><label class="block text-[10px]">개선후 위험도</label><span class="font-bold text-emerald-600">${afterScore}점</span></div>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        async function onProcessChange(itemId, newProcessName) {
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const catObj = ELEVATOR_KRAS_HIERARCHY.find(c => c.category === selectedCat);
+            if (!catObj) return;
+            const procObj = catObj.processes.find(p => p.processName === newProcessName);
+            if (!procObj || procObj.steps.length === 0) return;
+            
+            const firstStep = procObj.steps[0];
+            const firstHz = firstStep.hazards[0];
+            await db.items.update(itemId, {
+                processName: newProcessName,
+                step: firstStep.step,
+                hazard: firstHz.hazard,
+                likelihood: firstHz.likelihood,
+                severity: firstHz.severity,
+                actionPlan: firstHz.actions.join('\n')
+            });
+            renderRiskCards();
+        }
+
+        async function onStepChange(itemId, newStepName) {
+            if (!newStepName) return;
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const item = await db.items.get(itemId);
+            if (!item) return;
+
+            const catObj = ELEVATOR_KRAS_HIERARCHY.find(c => c.category === selectedCat);
+            if (!catObj) return;
+            const procObj = catObj.processes.find(p => p.processName === item.processName);
+            if (!procObj) return;
+            const stepObj = procObj.steps.find(s => s.step === newStepName);
+            if (!stepObj || stepObj.hazards.length === 0) return;
+
+            const firstHz = stepObj.hazards[0];
+            await db.items.update(itemId, {
+                step: stepObj.step,
+                hazard: firstHz.hazard,
+                likelihood: firstHz.likelihood,
+                severity: firstHz.severity,
+                actionPlan: firstHz.actions.join('\n')
+            });
+            renderRiskCards();
+        }
+
+        async function onHazardChange(itemId, newHazardText) {
+            if (!newHazardText) return;
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const item = await db.items.get(itemId);
+            if (!item) return;
+
+            const catObj = ELEVATOR_KRAS_HIERARCHY.find(c => c.category === selectedCat);
+            if (!catObj) return;
+            const procObj = catObj.processes.find(p => p.processName === item.processName);
+            if (!procObj) return;
+            const stepObj = procObj.steps.find(s => s.step === item.step);
+            if (!stepObj) return;
+            const hazardObj = stepObj.hazards.find(hz => hz.hazard === newHazardText);
+            if (!hazardObj) return;
+
+            await db.items.update(itemId, {
+                hazard: hazardObj.hazard,
+                likelihood: hazardObj.likelihood,
+                severity: hazardObj.severity,
+                actionPlan: hazardObj.actions.join('\n')
+            });
+            renderRiskCards();
+        }
+
+        async function onActionCheckboxChange(itemId, checkboxElem) {
+            const item = await db.items.get(itemId);
+            if (!item) return;
+
+            let currentPlans = item.actionPlan ? item.actionPlan.split('\n').map(s => s.trim()).filter(Boolean) : [];
+            const val = checkboxElem.value;
+
+            if (checkboxElem.checked) {
+                if (!currentPlans.includes(val)) currentPlans.push(val);
+            } else {
+                currentPlans = currentPlans.filter(p => p !== val);
+            }
+
+            await db.items.update(itemId, { actionPlan: currentPlans.join('\n') });
+            renderRiskCards();
+        }
+
+        async function updateKrasItem(id, key, val) {
+            await db.items.update(id, { [key]: val });
+            if (['likelihood', 'severity', 'afterLikelihood', 'afterSeverity'].includes(key)) renderRiskCards();
+        }
+
+        async function addAssessmentCard() {
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const catObj = ELEVATOR_KRAS_HIERARCHY.find(c => c.category === selectedCat);
+            let pName = '기계실 점검', sName = '제어반 점검', hName = '1. 제어반 점검 시 부주의로 인한 쇼트, 감전', aPlan = '안전조치 대책';
+            if (catObj && catObj.processes.length > 0) {
+                pName = catObj.processes[0].processName;
+                sName = catObj.processes[0].steps[0].step;
+                hName = catObj.processes[0].steps[0].hazards[0].hazard;
+                aPlan = catObj.processes[0].steps[0].hazards[0].actions.join('\n');
+            }
+            await db.items.add({ category: selectedCat, processName: pName, step: sName, hazard: hName, likelihood: 1, severity: 3, actionPlan: aPlan, afterLikelihood: 1, afterSeverity: 2 });
+            renderRiskCards();
+        }
+
+        async function deleteRiskItem(id) {
+            await db.items.delete(id);
+            renderRiskCards();
+        }
+
+        async function saveKrasDataOffline() {
+            const siteName = document.getElementById('kras-site-name').value;
+            const workDate = document.getElementById('kras-work-date').value;
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const evaluator = document.getElementById('kras-evaluator').value;
+            const worker = document.querySelector('.kras-worker-name-input') ? document.querySelector('.kras-worker-name-input').value : '근로자';
+
+            const riskItems = await db.items.where('category').equals(selectedCat).toArray();
+            const riskSummary = riskItems.map(r => `[대분류:${r.category}] 공정명:${r.processName} / 세부작업명:${r.step} / 유해위험요인:${r.hazard}`).join(' / ');
+
+            await db.reports.add({ type: '위험성평가', siteName, workDate, tbmTime: '-', processName: selectedCat, tbmLeader: evaluator, author: evaluator, workersList: worker, notes: '-', riskSummary, photo: null, createdAt: new Date().toISOString() });
+            alert('✅ 승강기 위험성평가 보고서가 저장 및 이력 등록되었습니다!');
+        }
+
+        async function openKrasPreviewModal() {
+            const siteName = document.getElementById('kras-site-name').value;
+            const workDate = document.getElementById('kras-work-date').value;
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const evaluator = document.getElementById('kras-evaluator').value;
+            const riskItems = await db.items.where('category').equals(selectedCat).toArray();
+
+            let rows = riskItems.map(r => `
+                <tr>
+                    <td class="border p-1.5 font-bold">${r.processName}</td>
+                    <td class="border p-1.5 font-medium">${r.step}</td>
+                    <td class="border p-1.5">${r.hazard}</td>
+                    <td class="border p-1.5 font-bold text-blue-600">${r.likelihood * r.severity}점</td>
+                    <td class="border p-1.5 text-left whitespace-pre-line">${r.actionPlan}</td>
+                    <td class="border p-1.5 font-bold text-emerald-600">${(r.afterLikelihood||1)*(r.afterSeverity||2)}점</td>
+                </tr>
+            `).join('');
+
+            let evalSigImg = (krasEvaluatorSigPad && !krasEvaluatorSigPad.isEmpty()) ? krasEvaluatorSigPad.toDataURL() : '';
+
+            document.getElementById('preview-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-blue-600"></i> 승강기 위험성평가 보고서 미리보기 (${selectedCat})`;
+            document.getElementById('report-preview-content').innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border">
+                        <div><b>현장명:</b> ${siteName}</div>
+                        <div><b>평가일자:</b> ${workDate}</div>
+                        <div><b>대분류:</b> ${selectedCat}</div>
+                        <div><b>평가담당자:</b> ${evaluator}</div>
+                    </div>
+                    <table class="w-full border-collapse border bg-white text-center">
+                        <tr class="bg-slate-200">
+                            <th class="border p-1.5">공정명</th>
+                            <th class="border p-1.5">세부작업명</th>
+                            <th class="border p-1.5">유해·위험요인 파악</th>
+                            <th class="border p-1.5 w-12">현재위험도</th>
+                            <th class="border p-1.5">안전보건조치 및 개선대책</th>
+                            <th class="border p-1.5 w-12">개선후</th>
+                        </tr>
+                        ${rows}
+                    </table>
+                    <div class="p-3 bg-white border rounded-xl flex items-center gap-4">
+                        <div><b>평가담당자 서명:</b></div>
+                        <div>${evalSigImg ? `<img src="${evalSigImg}" class="h-10 border">` : '서명 없음'}</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('report-preview-modal').classList.remove('hidden');
+        }
+
+        async function generateKrasReportPDF() {
+            const siteName = document.getElementById('kras-site-name').value;
+            const workDate = document.getElementById('kras-work-date').value;
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const evaluator = document.getElementById('kras-evaluator').value;
+
+            document.getElementById('pdf-kras-site').textContent = siteName;
+            document.getElementById('pdf-kras-date').textContent = workDate;
+            document.getElementById('pdf-kras-cat-title').textContent = `[대분류: ${selectedCat}] 승강기 유지보수 및 점검 위험성평가표`;
+            
+            let evalSigImg = (krasEvaluatorSigPad && !krasEvaluatorSigPad.isEmpty()) ? krasEvaluatorSigPad.toDataURL() : '';
+            document.getElementById('pdf-kras-sign-evaluator').innerHTML = evalSigImg ? `<img src="${evalSigImg}" style="height:25px; display:block; margin:auto;">` : evaluator;
+
+            let workerSigsHtml = '';
+            document.querySelectorAll('.kras-worker-row').forEach(row => {
+                let wName = row.querySelector('.kras-worker-name-input').value;
+                let pad = row.querySelector('canvas').signaturePadInstance;
+                let sImg = (pad && !pad.isEmpty()) ? pad.toDataURL() : '';
+                workerSigsHtml += `<div style="display:inline-block; border:1px solid #cbd5e1; padding:2px 6px; margin:2px; text-align:center; background:#f8fafc;"><div style="font-weight:bold; font-size:9px;">${wName || '참석근로자'}</div>${sImg ? `<img src="${sImg}" style="height:22px; display:block; margin:auto;">` : '서명생략'}</div>`;
+            });
+            document.getElementById('pdf-kras-sign-worker').innerHTML = workerSigsHtml || '참석자';
+
+            const riskItems = await db.items.where('category').equals(selectedCat).toArray();
+            let rowsHtml = '';
+            riskItems.forEach(r => {
+                const score = r.likelihood * r.severity;
+                const afterScore = (r.afterLikelihood || 1) * (r.afterSeverity || 2);
+                rowsHtml += `
+                    <tr>
+                        <td class="border p-1.5 font-bold">${r.processName}</td>
+                        <td class="border p-1.5">${r.step}</td>
+                        <td class="border p-1.5">${r.hazard}</td>
+                        <td class="border p-1.5 font-bold">${r.likelihood}</td>
+                        <td class="border p-1.5 font-bold">${r.severity}</td>
+                        <td class="border p-1.5 font-bold text-blue-600">${score}</td>
+                        <td class="border p-1.5 text-left whitespace-pre-line">${r.actionPlan}</td>
+                        <td class="border p-1.5 font-bold text-emerald-600">${afterScore}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('pdf-kras-rows').innerHTML = rowsHtml;
+            document.getElementById('pdf-kras-signatures-box').innerHTML = `<div style="font-weight:bold; margin-top:4px; font-size:10px;">참석 근로자 서명 확인:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">${workerSigsHtml}</div>`;
+
+            const opt = {
+                margin: 0,
+                filename: `승강기_위험성평가보고서_${selectedCat}_${siteName}_${workDate}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(document.getElementById('printable-kras-pdf')).save();
+        }
+
+        function closeReportPreviewModal() {
+            document.getElementById('report-preview-modal').classList.add('hidden');
+        }
+
+        async function searchHistoryRecords() {
+            const container = document.getElementById('search-results-list');
+            if (!container) return;
+            let reports = await db.reports.reverse().toArray();
+            
+            const searchDate = document.getElementById('search-date').value;
+            const searchSite = document.getElementById('search-site').value.toLowerCase();
+            const searchAuthor = document.getElementById('search-author').value.toLowerCase();
+
+            let filtered = reports.filter(r => {
+                let matchDate = !searchDate || r.workDate === searchDate;
+                let matchSite = !searchSite || r.siteName.toLowerCase().includes(searchSite);
+                let matchAuthor = !searchAuthor || r.author.toLowerCase().includes(searchAuthor) || (r.workersList && r.workersList.toLowerCase().includes(searchAuthor));
+                return matchDate && matchSite && matchAuthor;
+            });
+
+            container.innerHTML = filtered.length === 0 ? '<div class="p-4 text-center text-xs text-slate-400 bg-white rounded-xl border">검색된 이력이 없습니다.</div>' : '';
+            
+            filtered.forEach(r => {
+                const badgeColor = r.type === 'TBM' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="bg-white p-4 rounded-xl border text-xs space-y-2 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded font-bold ${badgeColor}">${r.type || 'TBM'}</span>
+                                <span class="font-bold text-slate-800 text-sm">${r.siteName}</span>
+                            </div>
+                            <div class="text-slate-500">작업일자: ${r.workDate} | 작성자/리더: ${r.tbmLeader || r.author}</div>
+                            <div class="text-slate-600 truncate max-w-md">내용: ${r.riskSummary !== '-' ? r.riskSummary : (r.notes || '특이사항 없음')}</div>
+                        </div>
+                        <div class="flex gap-1.5 w-full sm:w-auto shrink-0">
+                            <button onclick="previewHistoryRecord(${r.id})" class="flex-1 sm:flex-none bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-eye"></i> 미리보기
+                            </button>
+                            <button onclick="downloadHistoryRecordPDF(${r.id})" class="flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-file-pdf"></i> PDF 다운
+                            </button>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        async function previewHistoryRecord(id) {
+            let r = await db.reports.get(id);
+            if (!r) return;
+
+            document.getElementById('preview-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-blue-600"></i> [${r.type}] 상세 이력 미리보기`;
+            document.getElementById('report-preview-content').innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border">
+                        <div><b>현장명:</b> ${r.siteName}</div>
+                        <div><b>작업일자:</b> ${r.workDate}</div>
+                        <div><b>보고서 구분:</b> ${r.type} (${r.processName || ''})</div>
+                        <div><b>작성자/리더:</b> ${r.author || r.tbmLeader}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1">■ 상세 내용 및 요약</h4>
+                        <div class="bg-white p-3 rounded-xl border">${r.riskSummary !== '-' ? r.riskSummary : (r.notes || '내용 없음')}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1">■ 참석 근로자</h4>
+                        <div class="bg-white p-3 rounded-xl border">${r.workersList || '없음'}</div>
+                    </div>
+                    ${r.photo ? `<div><h4 class="font-bold text-slate-700 mb-1">■ 현장 사진</h4><img src="${r.photo}" class="h-40 rounded-lg border object-cover"></div>` : ''}
+                </div>
+            `;
+            document.getElementById('report-preview-modal').classList.remove('hidden');
+        }
+
+        async function downloadHistoryRecordPDF(id) {
+            let r = await db.reports.get(id);
+            if (!r) return;
+
+            if (r.type === 'TBM') {
+                document.getElementById('pdf-tbm-site').textContent = r.siteName;
+                document.getElementById('pdf-tbm-date').textContent = r.workDate;
+                document.getElementById('pdf-tbm-process').textContent = r.processName || '승강기 유지관리';
+                document.getElementById('pdf-tbm-leader').textContent = r.tbmLeader || r.author;
+                document.getElementById('pdf-tbm-sign-author').textContent = r.author;
+                document.getElementById('pdf-tbm-notes').innerHTML = `<b>특이사항:</b> ${r.notes || '없음'}`;
+                document.getElementById('pdf-tbm-workers-list').textContent = "참석 근로자: " + (r.workersList || '없음');
+                
+                let checklistItems = await db.masterChecklist.toArray();
+                document.getElementById('pdf-tbm-checklist-box').innerHTML = checklistItems.map(c => `<div>[✔] ${c.text}</div>`).join('');
+
+                const photoElem = document.getElementById('pdf-tbm-photo-container');
+                photoElem.innerHTML = r.photo ? `<img src="${r.photo}" class="max-h-48 mx-auto rounded border">` : '<span class="text-slate-400">등록된 사진 없음</span>';
+
+                const opt = {
+                    margin: 0,
+                    filename: `TBM_보고서_${r.siteName}_${r.workDate}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                html2pdf().set(opt).from(document.getElementById('printable-tbm-pdf')).save();
+            } else {
+                alert("위험성평가 이력은 저장 당시의 공정명 탭('2. 위험성')에서 PDF 출력이 가장 정확하게 지원됩니다.");
+            }
+        }
+
+        async function exportHistoryToExcel() {
+            let reports = await db.reports.reverse().toArray();
+            if (reports.length === 0) return alert("이력 없음");
+            const worksheet = XLSX.utils.json_to_sheet(reports);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "이력");
+            XLSX.writeFile(workbook, `안전관리_통합이력.xlsx`);
+        }
+
         let expenseRowCount = 0;
-
         function addExpenseRow() {
             expenseRowCount++;
             const container = document.getElementById('expense-items-container');
             if (!container) return;
-
             const rowId = `exp-row-${expenseRowCount}`;
-            const today = new Date().toISOString().split('T')[0];
-
-            const html = `
-                <div id="${rowId}" class="p-3 bg-white border rounded-xl space-y-2 relative text-xs shadow-sm">
-                    <button onclick="removeExpenseRow('${rowId}')" class="absolute top-2 right-2 text-slate-400 hover:text-rose-500 text-xs">
-                        <i class="fa-solid fa-xmark"></i> 삭제
-                    </button>
-                    
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            container.insertAdjacentHTML('beforeend', `
+                <div id="${rowId}" class="p-3 bg-white border rounded-xl space-y-2 text-xs shadow-sm relative">
+                    <button onclick="document.getElementById('${rowId}').remove(); calculateExpenseTotal();" class="absolute top-2 right-2 text-rose-500 font-bold">삭제</button>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 pr-10">
+                        <div><label class="block text-[10px] text-slate-500 font-bold">사용일자</label><input type="date" value="${new Date().toISOString().split('T')[0]}" class="exp-item-date border p-1 rounded w-full"></div>
                         <div>
-                            <label class="block text-slate-500 mb-0.5">사용 날짜</label>
-                            <input type="date" value="${today}" class="exp-item-date w-full border rounded p-1.5 bg-slate-50 font-medium">
+                            <label class="block text-[10px] text-slate-500 font-bold">계정과목</label>
+                            <select class="exp-item-account border p-1 rounded w-full bg-slate-50 font-bold">
+                                <option value="운반비">운반비</option>
+                                <option value="유지보수비">유지보수비</option>
+                                <option value="소모품비">소모품비</option>
+                                <option value="차량유지비">차량유지비</option>
+                                <option value="기타잡비">기타잡비</option>
+                            </select>
                         </div>
+                        <div><label class="block text-[10px] text-slate-500 font-bold">사용자</label><input type="text" value="${currentUser ? `${currentUser.name} ${currentUser.rank || ''}` : '홍길동'}" class="exp-item-user border p-1 rounded font-bold w-full"></div>
                         <div>
-                            <label class="block text-slate-500 mb-0.5">증빙 서류</label>
-                            <select class="exp-item-proof w-full border rounded p-1.5 bg-slate-50 font-bold">
-                                <option value="현금영수증">현금영수증</option>
+                            <label class="block text-[10px] text-slate-500 font-bold">증빙종류</label>
+                            <select class="exp-item-proof border p-1 rounded w-full bg-slate-50 font-bold">
                                 <option value="신용카드">신용카드</option>
-                                <option value="체크카드">체크카드</option>
+                                <option value="현금영수증">현금영수증</option>
+                                <option value="세금계산서">세금계산서</option>
                                 <option value="간이영수증">간이영수증</option>
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-slate-500 mb-0.5">계정과목</label>
-                            <select class="exp-item-account w-full border rounded p-1.5 bg-slate-50 font-bold text-blue-900">
-                                <option value="운반비">운반비</option>
-                                <option value="사무용품비">사무용품비</option>
-                                <option value="복리후생비">복리후생비</option>
-                                <option value="EL소모품비">EL소모품비</option>
-                                <option value="여비교통비">여비교통비</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-slate-500 mb-0.5">지출 금액(원)</label>
-                            <input type="number" oninput="calculateExpenseTotal()" placeholder="0" class="exp-item-amount w-full border rounded p-1.5 bg-slate-50 font-bold text-right text-blue-600">
-                        </div>
+                        <div><label class="block text-[10px] text-slate-500 font-bold">금액 (원)</label><input type="number" oninput="calculateExpenseTotal()" placeholder="0" class="exp-item-amount border p-1 rounded font-bold text-right w-full"></div>
                     </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div class="sm:col-span-2">
-                            <label class="block text-slate-500 mb-0.5">내역 (사용 사유/거래처)</label>
-                            <input type="text" placeholder="예: 화물운반비(한결상사)" class="exp-item-desc w-full border rounded p-1.5 bg-slate-50">
-                        </div>
-                        <div>
-                            <label class="block text-slate-500 mb-0.5">승인번호 / 비고</label>
-                            <input type="text" placeholder="예: 성모#7" class="exp-item-note w-full border rounded p-1.5 bg-slate-50">
-                        </div>
-                    </div>
-
                     <div>
-                        <label class="block text-slate-500 mb-0.5"><i class="fa-solid fa-camera text-blue-600"></i> 영수증 사진 촬영/첨부</label>
-                        <input type="file" accept="image/*" capture="environment" class="exp-item-file text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700">
+                        <label class="block text-[10px] text-slate-500 font-bold mb-1">사용내역 상세</label>
+                        <input type="text" placeholder="예: 강남현장 엘리베이터 비상구동기 자재 구입" class="exp-item-desc w-full border p-1.5 rounded bg-slate-50">
+                    </div>
+                    <div class="flex items-center gap-2 pt-1 border-t">
+                        <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded cursor-pointer font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-camera text-blue-600"></i> 영수증 사진 첨부
+                            <input type="file" accept="image/*" capture="environment" onchange="previewReceiptImage(this, '${rowId}')" class="hidden">
+                        </label>
+                        <span id="${rowId}-receipt-name" class="text-slate-400 italic">첨부된 사진 없음</span>
+                    </div>
+                    <div id="${rowId}-receipt-preview" class="hidden mt-1">
+                        <img id="${rowId}-receipt-img" src="" class="h-24 rounded border object-cover">
                     </div>
                 </div>
-            `;
-
-            container.insertAdjacentHTML('beforeend', html);
+            `.trim());
             calculateExpenseTotal();
         }
 
-        function removeExpenseRow(rowId) {
-            const row = document.getElementById(rowId);
-            if (row) row.remove();
-            calculateExpenseTotal();
+        function previewReceiptImage(input, rowId) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById(`${rowId}-receipt-name`).textContent = input.files[0].name;
+                    document.getElementById(`${rowId}-receipt-img`).src = e.target.result;
+                    document.getElementById(`${rowId}-receipt-preview`).classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
         }
 
         function calculateExpenseTotal() {
-            const amountInputs = document.querySelectorAll('.exp-item-amount');
             let total = 0;
-            amountInputs.forEach(input => { total += parseInt(input.value) || 0; });
+            document.querySelectorAll('.exp-item-amount').forEach(i => total += parseInt(i.value) || 0);
             document.getElementById('exp-total-amount').textContent = total.toLocaleString() + ' 원';
         }
 
-        async function saveExpenseData() {
+        async function saveExpenseReport(statusParam = '미결재') {
             const claimDate = document.getElementById('exp-claim-date').value;
             const dept = document.getElementById('exp-dept').value;
             const author = document.getElementById('exp-author').value;
+            const payee = document.getElementById('exp-payee').value;
+            let itemList = [], totalAmount = 0;
 
-            const rows = document.querySelectorAll('#expense-items-container > div');
-            if (rows.length === 0) return alert("저장할 지출 내역이 없습니다.");
-
-            const itemList = [];
-            let totalAmount = 0;
-
-            rows.forEach(row => {
-                const date = row.querySelector('.exp-item-date').value;
-                const proof = row.querySelector('.exp-item-proof').value;
-                const account = row.querySelector('.exp-item-account').value;
-                const amount = parseInt(row.querySelector('.exp-item-amount').value) || 0;
-                const desc = row.querySelector('.exp-item-desc').value;
-                const note = row.querySelector('.exp-item-note').value;
-
+            document.querySelectorAll('#expense-items-container > div').forEach(row => {
+                let amount = parseInt(row.querySelector('.exp-item-amount').value) || 0;
                 totalAmount += amount;
-                itemList.push({ date, proof, account, amount, desc, note });
-            });
-
-            await db.expenses.add({ claimDate, dept, author, items: itemList, totalAmount, createdAt: new Date().toISOString() });
-            alert(`✅ 총 ${rows.length}건(${totalAmount.toLocaleString()}원)의 청구가 저장되었습니다!`);
-        }
-
-        function exportExpenseExcel() {
-            const claimDate = document.getElementById('exp-claim-date').value;
-            const author = document.getElementById('exp-author').value || '직원';
-            const rows = document.querySelectorAll('#expense-items-container > div');
-
-            if (rows.length === 0) return alert("출력할 내역이 없습니다.");
-
-            const excelData = [];
-            let totalSum = 0;
-
-            rows.forEach((row, idx) => {
-                const date = row.querySelector('.exp-item-date').value;
-                const proof = row.querySelector('.exp-item-proof').value;
-                const account = row.querySelector('.exp-item-account').value;
-                const amount = parseInt(row.querySelector('.exp-item-amount').value) || 0;
-                const desc = row.querySelector('.exp-item-desc').value;
-                const note = row.querySelector('.exp-item-note').value;
-
-                totalSum += amount;
-                excelData.push({
-                    "NO": idx + 1,
-                    "날짜": date,
-                    "증빙서류": proof,
-                    "계정과목": account,
-                    "내역": desc,
-                    "금액": amount,
-                    "승인번호/비고": note
+                let imgElem = row.querySelector('img');
+                let receiptImg = (imgElem && imgElem.src && !imgElem.src.endsWith('/')) ? imgElem.src : null;
+                
+                itemList.push({
+                    date: row.querySelector('.exp-item-date').value,
+                    account: row.querySelector('.exp-item-account').value,
+                    user: row.querySelector('.exp-item-user').value,
+                    proof: row.querySelector('.exp-item-proof').value,
+                    amount,
+                    desc: row.querySelector('.exp-item-desc').value,
+                    receiptImg
                 });
             });
 
-            const worksheet = XLSX.utils.json_to_sheet(excelData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "개인사용비용청구서");
+            if (itemList.length === 0) return alert("최소 1개 이상의 지출 항목을 추가해주세요.");
 
-            XLSX.writeFile(workbook, `개인사용비용청구서_${author}_${claimDate}.xlsx`);
-            alert(`📊 총 ${rows.length}건(${totalSum.toLocaleString()}원)의 청구 내역이 엑셀로 다운로드되었습니다!`);
+            await db.expenses.add({ claimDate, dept, author, payee, items: itemList, totalAmount, status: statusParam, payDate: '-', approvedDate: '-', paidDate: '-', createdAt: new Date().toISOString() });
+            alert(statusParam === '결재대기' ? "✅ 경비청구서가 결재 상신되었습니다." : "💾 임시 저장되었습니다.");
+            renderSavedExpenseReports();
+            renderAdminApprovalQueue();
+        }
+
+        async function openExpensePreviewModal() {
+            const claimDate = document.getElementById('exp-claim-date').value;
+            const dept = document.getElementById('exp-dept').value;
+            const author = document.getElementById('exp-author').value;
+            const payee = document.getElementById('exp-payee').value;
+            
+            let rowsHtml = '';
+            let totalAmount = 0;
+
+            document.querySelectorAll('#expense-items-container > div').forEach(row => {
+                let date = row.querySelector('.exp-item-date').value;
+                let account = row.querySelector('.exp-item-account').value;
+                let proof = row.querySelector('.exp-item-proof').value;
+                let amount = parseInt(row.querySelector('.exp-item-amount').value) || 0;
+                let desc = row.querySelector('.exp-item-desc').value;
+                let imgElem = row.querySelector('img');
+                let receiptImg = (imgElem && imgElem.src && !imgElem.src.endsWith('/')) ? imgElem.src : null;
+
+                totalAmount += amount;
+                rowsHtml += `
+                    <tr class="border">
+                        <td class="border p-1.5">${date}</td>
+                        <td class="border p-1.5 font-bold">${account}</td>
+                        <td class="border p-1.5">${proof}</td>
+                        <td class="border p-1.5 text-left">${desc}</td>
+                        <td class="border p-1.5 font-bold text-right">${amount.toLocaleString()}원</td>
+                    </tr>
+                    ${receiptImg ? `<tr><td colspan="5" class="border p-2 text-center"><img src="${receiptImg}" class="max-h-36 mx-auto rounded border"></td></tr>` : ''}
+                `;
+            });
+
+            document.getElementById('preview-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-blue-600"></i> 개인사용비용 지출결의서 미리보기`;
+            document.getElementById('report-preview-content').innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border">
+                        <div><b>기안일자:</b> ${claimDate}</div>
+                        <div><b>부서명:</b> ${dept}</div>
+                        <div><b>기안자:</b> ${author}</div>
+                        <div><b>지급받는자:</b> ${payee}</div>
+                    </div>
+                    <table class="w-full border-collapse border bg-white text-center">
+                        <tr class="bg-slate-200">
+                            <th class="border p-1.5">사용일자</th>
+                            <th class="border p-1.5">계정과목</th>
+                            <th class="border p-1.5">증빙종류</th>
+                            <th class="border p-1.5">사용내역</th>
+                            <th class="border p-1.5">금액</th>
+                        </tr>
+                        ${rowsHtml}
+                    </table>
+                    <div class="text-right font-bold text-sm text-blue-600">총 청구 금액: ${totalAmount.toLocaleString()} 원</div>
+                </div>
+            `;
+            document.getElementById('report-preview-modal').classList.remove('hidden');
+        }
+
+        async function generateExpenseReportPDF() {
+            const claimDate = document.getElementById('exp-claim-date').value;
+            const dept = document.getElementById('exp-dept').value;
+            const author = document.getElementById('exp-author').value;
+            const payee = document.getElementById('exp-payee').value;
+
+            document.getElementById('pdf-exp-claim-date').textContent = claimDate;
+            document.getElementById('pdf-exp-dept').textContent = dept;
+            document.getElementById('pdf-exp-author').textContent = author;
+            document.getElementById('pdf-exp-payee').textContent = payee;
+
+            let rowsHtml = '';
+            let totalAmount = 0;
+
+            document.querySelectorAll('#expense-items-container > div').forEach(row => {
+                let date = row.querySelector('.exp-item-date').value;
+                let account = row.querySelector('.exp-item-account').value;
+                let proof = row.querySelector('.exp-item-proof').value;
+                let amount = parseInt(row.querySelector('.exp-item-amount').value) || 0;
+                let desc = row.querySelector('.exp-item-desc').value;
+
+                totalAmount += amount;
+                rowsHtml += `
+                    <tr>
+                        <td class="border p-1.5">${date}</td>
+                        <td class="border p-1.5 font-bold">${account}</td>
+                        <td class="border p-1.5">${proof}</td>
+                        <td class="border p-1.5 text-left">${desc}</td>
+                        <td class="border p-1.5 font-bold text-right">${amount.toLocaleString()}원</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('pdf-exp-rows').innerHTML = rowsHtml;
+            document.getElementById('pdf-exp-total').textContent = totalAmount.toLocaleString() + ' 원';
+
+            const opt = {
+                margin: 0,
+                filename: `지출결의서_${claimDate}_${author}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(document.getElementById('printable-expense-pdf')).save();
+        }
+
+        async function previewSavedExpenseRecord(id) {
+            let r = await db.expenses.get(id);
+            if (!r) return;
+
+            let rowsHtml = r.items.map(item => `
+                <tr class="border">
+                    <td class="border p-1.5">${item.date}</td>
+                    <td class="border p-1.5 font-bold">${item.account}</td>
+                    <td class="border p-1.5">${item.proof}</td>
+                    <td class="border p-1.5 text-left">${item.desc}</td>
+                    <td class="border p-1.5 font-bold text-right">${item.amount.toLocaleString()}원</td>
+                </tr>
+                ${item.receiptImg ? `<tr><td colspan="5" class="border p-2 text-center"><img src="${item.receiptImg}" class="max-h-36 mx-auto rounded border"></td></tr>` : ''}
+            `).join('');
+
+            document.getElementById('preview-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-blue-600"></i> 지출결의서 상세 이력 미리보기 (${r.author})`;
+            document.getElementById('report-preview-content').innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border">
+                        <div><b>기안일자:</b> ${r.claimDate}</div>
+                        <div><b>부서명:</b> ${r.dept}</div>
+                        <div><b>기안자:</b> ${r.author}</div>
+                        <div><b>지급받는자:</b> ${r.payee}</div>
+                        <div><b>결재상태:</b> <span class="text-blue-600 font-bold">${r.status}</span></div>
+                    </div>
+                    <table class="w-full border-collapse border bg-white text-center">
+                        <tr class="bg-slate-200">
+                            <th class="border p-1.5">사용일자</th>
+                            <th class="border p-1.5">계정과목</th>
+                            <th class="border p-1.5">증빙종류</th>
+                            <th class="border p-1.5">사용내역</th>
+                            <th class="border p-1.5">금액</th>
+                        </tr>
+                        ${rowsHtml}
+                    </table>
+                    <div class="text-right font-bold text-sm text-blue-600">총 청구 금액: ${r.totalAmount.toLocaleString()} 원</div>
+                </div>
+            `;
+            document.getElementById('report-preview-modal').classList.remove('hidden');
+        }
+
+        async function downloadSavedExpenseRecordPDF(id) {
+            let r = await db.expenses.get(id);
+            if (!r) return;
+
+            document.getElementById('pdf-exp-claim-date').textContent = r.claimDate;
+            document.getElementById('pdf-exp-dept').textContent = r.dept;
+            document.getElementById('pdf-exp-author').textContent = r.author;
+            document.getElementById('pdf-exp-payee').textContent = r.payee;
+
+            let rowsHtml = r.items.map(item => `
+                <tr>
+                    <td class="border p-1.5">${item.date}</td>
+                    <td class="border p-1.5 font-bold">${item.account}</td>
+                    <td class="border p-1.5">${item.proof}</td>
+                    <td class="border p-1.5 text-left">${item.desc}</td>
+                    <td class="border p-1.5 font-bold text-right">${item.amount.toLocaleString()}원</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('pdf-exp-rows').innerHTML = rowsHtml;
+            document.getElementById('pdf-exp-total').textContent = r.totalAmount.toLocaleString() + ' 원';
+
+            const opt = {
+                margin: 0,
+                filename: `지출결의서_${r.claimDate}_${r.author}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(document.getElementById('printable-expense-pdf')).save();
+        }
+
+        async function renderSavedExpenseReports() {
+            const container = document.getElementById('admin-saved-expense-list');
+            if (!container) return;
+            let records = await db.expenses.reverse().toArray();
+            container.innerHTML = records.length === 0 ? '<div class="p-4 text-center text-xs text-slate-400">결재 내역 없음</div>' : '';
+            records.forEach(r => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="p-3 border rounded-xl bg-slate-50 text-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <div class="font-bold text-slate-800">[결의일: ${r.claimDate}] 기안자: ${r.author} (${r.totalAmount.toLocaleString()}원)</div>
+                            <div class="text-slate-500 mt-0.5">상태: <span class="font-bold text-blue-600">${r.status}</span></div>
+                        </div>
+                        <div class="flex gap-1.5 w-full sm:w-auto shrink-0">
+                            <button onclick="previewSavedExpenseRecord(${r.id})" class="flex-1 sm:flex-none bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-eye"></i> 미리보기
+                            </button>
+                            <button onclick="downloadSavedExpenseRecordPDF(${r.id})" class="flex-1 sm:flex-none bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-file-pdf"></i> PDF 다운
+                            </button>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        function selectAllApprovalCheckboxes(status) {
+            document.querySelectorAll('.admin-queue-checkbox').forEach(cb => cb.checked = status);
+        }
+
+        async function renderAdminApprovalQueue() {
+            const container = document.getElementById('admin-approval-queue');
+            if (!container) return;
+            let records = await db.expenses.where('status').equals('결재대기').reverse().toArray();
+            container.innerHTML = records.length === 0 ? '<div class="p-4 text-center text-xs text-slate-400">대기 중인 결재건 없음</div>' : '';
+            records.forEach(r => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="p-3 bg-slate-50 border rounded-xl flex items-start gap-3 text-xs">
+                        <input type="checkbox" value="${r.id}" class="admin-queue-checkbox mt-1">
+                        <div class="flex-1">
+                            <div class="font-bold">[결의: ${r.claimDate}] 기안자: ${r.author} / 금액: ${r.totalAmount.toLocaleString()}원</div>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        async function previewSelectedBatchCombineReport() {
+            const checked = document.querySelectorAll('.admin-queue-checkbox:checked');
+            if (checked.length === 0) return alert("미리보기할 결재 건을 선택해주세요.");
+            
+            let combinedRowsHtml = '';
+            let grandTotal = 0;
+
+            for (let cb of checked) {
+                let rec = await db.expenses.get(parseInt(cb.value));
+                if (rec && rec.items) {
+                    rec.items.forEach(item => {
+                        grandTotal += item.amount;
+                        combinedRowsHtml += `
+                            <tr class="border">
+                                <td class="border p-1.5">${item.date}</td>
+                                <td class="border p-1.5 font-bold">${rec.author}</td>
+                                <td class="border p-1.5 font-bold">${item.account}</td>
+                                <td class="border p-1.5">${item.proof}</td>
+                                <td class="border p-1.5 text-left">${item.desc}</td>
+                                <td class="border p-1.5 font-bold text-right">${item.amount.toLocaleString()}원</td>
+                            </tr>
+                        `;
+                    });
+                }
+            }
+
+            document.getElementById('preview-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-purple-600"></i> 선택 건 합산 지출결의서 미리보기`;
+            document.getElementById('report-preview-content').innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border">
+                        <div><b>합산 대상 건수:</b> ${checked.length}건</div>
+                        <div><b>결재관리자:</b> ${currentUser ? `${currentUser.name} ${currentUser.rank || ''}` : '관리자'}</div>
+                    </div>
+                    <table class="w-full border-collapse border bg-white text-center">
+                        <tr class="bg-slate-200">
+                            <th class="border p-1.5">사용일자</th>
+                            <th class="border p-1.5">기안자</th>
+                            <th class="border p-1.5">계정과목</th>
+                            <th class="border p-1.5">증빙종류</th>
+                            <th class="border p-1.5">사용내역</th>
+                            <th class="border p-1.5">금액</th>
+                        </tr>
+                        ${combinedRowsHtml}
+                    </table>
+                    <div class="text-right font-bold text-sm text-purple-600">합산 총 청구 금액: ${grandTotal.toLocaleString()} 원</div>
+                </div>
+            `;
+            document.getElementById('report-preview-modal').classList.add('hidden');
+        }
+
+        async function processSelectedBatchApproveOnly() {
+            const checked = document.querySelectorAll('.admin-queue-checkbox:checked');
+            if (checked.length === 0) return alert("승인 처리할 건을 선택해주세요.");
+            const approvedDate = document.getElementById('admin-batch-approved-date').value;
+            const payDate = document.getElementById('admin-batch-paydate').value;
+            const paidDate = document.getElementById('admin-batch-paid-date').value;
+
+            let count = 0;
+            for (let cb of checked) {
+                let rec = await db.expenses.get(parseInt(cb.value));
+                if (rec) {
+                    await db.expenses.update(rec.id, { status: '승인완료', approvedDate, payDate, paidDate });
+                    count++;
+                }
+            }
+            alert(`✅ 선택하신 ${count}건이 성공적으로 승인 완료 처리되었습니다!`);
+            renderAdminApprovalQueue();
+            renderSavedExpenseReports();
+        }
+
+        async function exportQuarterlyTaxExcel() {
+            let records = await db.expenses.where('status').equals('승인완료').toArray();
+            if (records.length === 0) return alert("승인 완료된 내역이 없습니다.");
+            let flatData = [];
+            records.forEach(r => {
+                r.items.forEach(item => {
+                    flatData.push({
+                        결의일자: r.claimDate,
+                        부서명: r.dept,
+                        기안자: r.author,
+                        지급받는자: r.payee,
+                        사용일자: item.date,
+                        계정과목: item.account,
+                        사용자: item.user,
+                        증빙종류: item.proof,
+                        사용내역상세: item.desc,
+                        금액: item.amount,
+                        결재상태: r.status
+                    });
+                });
+            });
+            const worksheet = XLSX.utils.json_to_sheet(flatData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "세무서제출용지출결의서");
+            XLSX.writeFile(workbook, `세무서제출용_경비청구내역.xlsx`);
+        }
+
+        async function renderNotices() {
+            const container = document.getElementById('notice-board-list');
+            if (!container) return;
+            let notices = await db.notices.reverse().toArray();
+            container.innerHTML = notices.map(n => `<div class="p-2 border rounded text-xs bg-slate-50 font-bold">${n.title}</div>`).join('');
+        }
+
+        async function saveNotice() {
+            const title = document.getElementById('notice-title').value;
+            const content = document.getElementById('notice-content').value;
+            await db.notices.add({ title, content, date: new Date().toISOString().split('T')[0], author: '관리자' });
+            renderNotices();
+            alert("공지 등록");
+        }
+
+        async function renderMasterChecklist() {
+            const container = document.getElementById('admin-checklist-items-list');
+            if (!container) return;
+            let items = await db.masterChecklist.toArray();
+            container.innerHTML = items.map(i => `<div class="p-2 border rounded text-xs">${i.text}</div>`).join('');
+        }
+
+        async function addMasterChecklistItem() {
+            const val = document.getElementById('admin-new-checklist-item').value;
+            if (val) { await db.masterChecklist.add({ text: val }); renderMasterChecklist(); }
+        }
+
+        function previewTbmPhoto(input) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = e => { tbmPhotoData = e.target.result; document.getElementById('tbm-photo-img').src = tbmPhotoData; document.getElementById('tbm-photo-preview').classList.remove('hidden'); };
+                reader.readAsDataURL(input.files[0]);
+            }
         }
     </script>
 </body>

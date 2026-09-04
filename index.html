@@ -14,6 +14,8 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <!-- html2pdf for Client-Side PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
@@ -21,7 +23,6 @@
             try { emailjs.init("YOUR_PUBLIC_KEY"); } catch(e){}
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
         .tab-btn.active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
@@ -113,7 +114,6 @@
                 </h1>
                 <p class="text-xs text-slate-300">위험성 평가 & TBM 스마트 통합 시스템</p>
             </div>
-            
             <div class="flex items-center gap-2">
                 <button onclick="switchTab('profile')" id="header-user-badge" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
                     <i class="fa-solid fa-circle-user text-blue-400"></i>
@@ -124,7 +124,7 @@
                 </button>
             </div>
         </div>
-        
+
         <!-- Tab Bar -->
         <nav class="flex bg-slate-800 text-slate-300 text-xs border-t border-slate-700 overflow-x-auto">
             <button onclick="switchTab('tbm')" id="tab-tbm" class="tab-btn active flex-1 py-2 text-center min-w-[55px] transition shrink-0">
@@ -145,39 +145,67 @@
             <button onclick="switchTab('admin')" id="tab-admin" class="tab-btn flex-1 py-2 text-center min-w-[65px] transition shrink-0">
                 <i class="fa-solid fa-users-gear block text-sm mb-0.5 text-blue-400"></i> 6. 회원관리
             </button>
+            <button onclick="switchTab('expense')" id="tab-expense" class="tab-btn flex-1 py-2 text-center min-w-[65px] transition shrink-0">
+                <i class="fa-solid fa-receipt block text-sm mb-0.5 text-emerald-400"></i> 7. 경비청구
+            </button>
             <button onclick="switchTab('profile')" id="tab-profile" class="tab-btn flex-1 py-2 text-center min-w-[55px] transition shrink-0">
-                <i class="fa-solid fa-id-card block text-sm mb-0.5"></i> 7. 내 정보
+                <i class="fa-solid fa-id-card block text-sm mb-0.5"></i> 8. 내 정보
             </button>
         </nav>
     </header>
 
-    <!-- Main Content Container -->
+    <!-- Notice Modal -->
+    <div id="notice-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 border border-slate-100 relative">
+            <div class="flex items-center gap-3 border-b pb-3">
+                <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-sm">
+                    <i class="fa-solid fa-bullhorn"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-sm">안전관리팀 주요 공지사항</h3>
+                    <p class="text-[10px] text-slate-500">에프엠엘지엘리베이터 전 직원 필수 숙지</p>
+                </div>
+            </div>
+            <div id="notice-modal-content" class="text-xs text-slate-700 bg-slate-50 p-3.5 rounded-xl border border-slate-200 leading-relaxed max-h-60 overflow-y-auto space-y-2"></div>
+            <div class="flex items-center justify-between pt-2">
+                <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none">
+                    <input type="checkbox" id="chk-dont-show-today" class="w-4 h-4 text-blue-600 rounded">
+                    <span>오늘 하루 동안 보지 않기</span>
+                </label>
+                <button onclick="closeNoticeModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow">
+                    확인 및 닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
     <main class="max-w-5xl mx-auto p-4 space-y-4">
 
-        <!-- TAB 1: TBM 독립 공간 -->
+        <!-- TAB 1: TBM -->
         <section id="sec-tbm" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-4">
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
                         <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                            <i class="fa-solid fa-building-user text-blue-600"></i> TBM 전용 현장 정보
+                            <i class="fa-solid fa-building-user text-blue-600"></i> 현장 및 TBM 정보
                         </h2>
                         <div class="grid grid-cols-2 gap-2 text-xs">
                             <div class="col-span-2">
-                                <label class="block text-slate-500 mb-1">TBM 현장명</label>
-                                <input type="text" id="tbm-site-name" value="강남 아크로 타워 (M-01)" class="w-full border rounded p-2 bg-slate-50 font-medium">
+                                <label class="block text-slate-500 mb-1">현장명</label>
+                                <input type="text" id="site-name" value="강남 아크로 타워 (M-01)" class="w-full border rounded p-2 bg-slate-50 font-medium">
                             </div>
                             <div>
                                 <label class="block text-slate-500 mb-1">작업일자</label>
-                                <input type="date" id="tbm-work-date" value="2026-09-03" class="w-full border rounded p-2 bg-slate-50 font-medium">
+                                <input type="date" id="work-date" value="2026-08-31" class="w-full border rounded p-2 bg-slate-50 font-medium">
                             </div>
                             <div>
-                                <label class="block text-slate-500 mb-1">TBM 시간</label>
+                                <label class="block text-slate-500 mb-1">TBM 작업시간</label>
                                 <input type="time" id="tbm-time" value="08:00" class="w-full border rounded p-2 bg-slate-50 font-medium">
                             </div>
                             <div>
                                 <label class="block text-slate-500 mb-1">공종구분</label>
-                                <input type="text" id="tbm-process-name" value="승강기 유지관리/부품교체" class="w-full border rounded p-2 bg-slate-50 font-medium">
+                                <input type="text" id="process-name" value="승강기 유지관리/부품교체" class="w-full border rounded p-2 bg-slate-50 font-medium">
                             </div>
                             <div>
                                 <label class="block text-slate-500 mb-1">TBM 리더(관리감독자)</label>
@@ -185,309 +213,476 @@
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-list-check text-blue-600"></i> TBM 필수 점검 항목
+                            </h2>
+                            <button onclick="addChecklistItem()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> 항목 추가
+                            </button>
+                        </div>
+                        <div id="checklist-container" class="space-y-2 text-xs"></div>
+                    </div>
+
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
                         <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                            <i class="fa-solid fa-users text-blue-600"></i> TBM 참석 근로자 선택 및 서명
+                            <i class="fa-solid fa-camera text-blue-600"></i> TBM 현장/단체 사진
                         </h2>
-                        <div id="tbm-workers-container" class="space-y-3"></div>
-                        <button onclick="addTbmWorkerCard()" class="w-full bg-slate-100 text-slate-700 py-2 rounded-lg text-xs font-bold border border-slate-200">+ TBM 참석자 추가</button>
+                        <input type="file" id="tbm-photo-input" accept="image/*" capture="environment" onchange="handleTbmPhotoUpload(this)" class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <div id="tbm-photo-preview" class="mt-2 hidden">
+                            <img id="tbm-photo-img" src="" class="h-32 rounded-lg border object-cover">
+                        </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="saveTbmDataOffline()" class="bg-slate-800 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                        <button onclick="generateTbmPDF()" class="bg-blue-600 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow"><i class="fa-solid fa-file-pdf"></i> PDF 다운</button>
-                        <button onclick="sendEmailReport()" class="bg-emerald-600 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow"><i class="fa-solid fa-paper-plane"></i> 이메일 제출</button>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-pen-to-square text-amber-500"></i> 특이사항 및 현장 지시사항
+                        </h2>
+                        <textarea id="tbm-notes" placeholder="현장 특이사항, 위험 요소 지시사항 등 기재" class="w-full text-xs border rounded p-2.5 bg-slate-50 h-24 focus:outline-none focus:ring-1 focus:ring-blue-500"></textarea>
+                    </div>
+                </div>
+
+                <div class="space-y-4 flex flex-col justify-between">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-users text-blue-600"></i> 참석 근로자 선택 및 서명
+                            </h2>
+                            <button onclick="addWorkerCard()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-user-plus"></i> 근로자 추가
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input type="text" id="worker-search-filter" oninput="filterWorkerOptions(this.value)" placeholder="🔍 근로자 이름 검색" class="w-full text-xs pl-8 pr-3 py-2 border rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none font-medium">
+                        </div>
+                        <div id="workers-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-1"></div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 pt-1">
+                        <button onclick="saveDataOffline()" class="bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow">
+                            <i class="fa-solid fa-floppy-disk"></i> 저장
+                        </button>
+                        <button onclick="switchTab('export'); generatePDFReport();" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow">
+                            <i class="fa-solid fa-file-pdf"></i> PDF 다운
+                        </button>
+                        <button onclick="sendEmailReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow">
+                            <i class="fa-solid fa-paper-plane"></i> 이메일 제출
+                        </button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- TAB 2: 위험성 평가 독립 공간 -->
+        <!-- TAB 2: KRAS -->
         <section id="sec-kras" class="space-y-4 hidden">
-            <!-- 위험성평가 독립 현장 및 평가자/근로자 서명 정보 -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 border-b pb-2">
-                    <i class="fa-solid fa-clipboard-check text-amber-500"></i> 위험성 평가 개요 및 결재/확인 서명
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                    <div>
-                        <label class="block text-slate-500 mb-1 font-bold">위험성평가 현장명</label>
-                        <input type="text" id="risk-site-name" value="강남 아크로 타워 (M-01)" class="w-full border rounded p-2 bg-slate-50 font-bold text-slate-800">
-                    </div>
-                    <div>
-                        <label class="block text-slate-500 mb-1 font-bold">평가일자</label>
-                        <input type="date" id="risk-work-date" value="2026-09-03" class="w-full border rounded p-2 bg-slate-50 font-medium">
-                    </div>
-                    <div>
-                        <label class="block text-slate-500 mb-1 font-bold">평가자 (담당자 이름)</label>
-                        <input type="text" id="risk-evaluator" value="홍길동 (안전관리자)" oninput="updateEvaluatorName(this.value)" class="w-full border rounded p-2 bg-slate-50 font-bold text-blue-600">
-                    </div>
+            <div class="flex flex-wrap justify-between items-center gap-2 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> KRAS 3x3 유해·위험요인 평가작성
+                    </h2>
+                    <p class="text-[11px] text-slate-500 mt-0.5">현장 위험요인을 등록 및 평가하고 저장 버튼을 눌러 확정하세요.</p>
                 </div>
-
-                <!-- 위험성평가 전용 참석 근로자 서명 -->
-                <div class="pt-2 border-t">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="block text-xs font-bold text-slate-700"><i class="fa-solid fa-signature text-amber-500"></i> 위험성 평가 확인 근로자 서명</label>
-                        <button onclick="addRiskWorkerCard()" class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded font-bold border border-slate-200">+ 근로자 서명 추가</button>
-                    </div>
-                    <div id="risk-workers-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="addAssessmentCard()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1 font-bold shadow-sm">
+                        <i class="fa-solid fa-plus"></i> 항목 추가
+                    </button>
+                    <button onclick="saveDataOffline()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 font-bold shadow-sm">
+                        <i class="fa-solid fa-floppy-disk text-amber-400"></i> 위험성평가 저장
+                    </button>
                 </div>
             </div>
-
-            <!-- 위험요인 작성 리스트 -->
-            <div class="flex justify-between items-center bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
-                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                    <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> KRAS 3x3 유해·위험요인 작성
-                </h2>
-                <button onclick="addAssessmentCard()" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow-sm">+ 위험요인 항목 추가</button>
-            </div>
-
             <div id="risk-card-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
 
-            <div class="grid grid-cols-3 gap-2 pt-3 border-t">
-                <button onclick="saveRiskDataOffline()" class="bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow"><i class="fa-solid fa-floppy-disk"></i> 위험성평가 저장</button>
-                <button onclick="generateRiskPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow"><i class="fa-solid fa-file-pdf"></i> PDF 다운</button>
-                <button onclick="sendEmailReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1 shadow"><i class="fa-solid fa-paper-plane"></i> 이메일 제출</button>
+        <!-- TAB 3: Report & Export -->
+        <section id="sec-export" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center space-y-3">
+                <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600 text-xl">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-slate-800 text-base">보고서 선택 및 내보내기</h2>
+                    <p class="text-xs text-slate-500 mt-1">TBM 일일 기록부와 KRAS 위험성 평가서를 각각 개별 보고서로 다운로드할 수 있습니다.</p>
+                </div>
+                <div class="pt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button onclick="generateTbmPDF()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-2 rounded-xl text-xs shadow flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-file-lines"></i> 1. TBM 기록부 다운
+                    </button>
+                    <button onclick="generateRiskPDF()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-2 rounded-xl text-xs shadow flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-clipboard-check"></i> 2. 위험성 평가서 다운
+                    </button>
+                    <button onclick="generateCombinedPDF()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-2 rounded-xl text-xs shadow flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-file-pdf"></i> 3. 통합 PDF 다운
+                    </button>
+                    <button onclick="sendEmailReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-2 rounded-xl text-xs shadow flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-paper-plane"></i> 4. 이메일 작성창 열기
+                    </button>
+                </div>
             </div>
         </section>
 
-        <!-- TAB 3: 보고서 출력 및 결재란 자동 연동 -->
-        <section id="sec-export" class="space-y-4 hidden">
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="generateTbmPDF()" class="bg-blue-600 text-white py-3 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-file-pdf"></i> TBM 기록부 다운</button>
-                <button onclick="generateRiskPDF()" class="bg-indigo-600 text-white py-3 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-file-pdf"></i> 위험성 평가서 다운</button>
+        <!-- TAB 4: Search -->
+        <section id="sec-search" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-magnifying-glass text-blue-600"></i> 안전 점검 / TBM 이력 검색
+                    </h2>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold">일자 검색</label>
+                        <input type="date" id="search-date" oninput="searchHistoryRecords()" class="w-full border rounded-lg p-2 bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold">현장명 검색</label>
+                        <input type="text" id="search-site" oninput="searchHistoryRecords()" placeholder="예: 강남 아크로 타워" class="w-full border rounded-lg p-2 bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold">작성자 / 참석자 검색</label>
+                        <input type="text" id="search-author" oninput="searchHistoryRecords()" placeholder="예: 홍길동" class="w-full border rounded-lg p-2 bg-slate-50">
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-2 border-t text-xs">
+                    <button onclick="searchHistoryRecords()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex-1 flex items-center justify-center gap-1 shadow-sm">
+                        <i class="fa-solid fa-magnifying-glass"></i> 검색 실행
+                    </button>
+                    <button onclick="exportHistoryToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg flex-1 flex items-center justify-center gap-1 shadow-sm">
+                        <i class="fa-solid fa-file-excel"></i> 엑셀 다운로드
+                    </button>
+                </div>
+            </div>
+            <div id="search-results-list" class="space-y-3"></div>
+        </section>
+
+        <!-- TAB 5: Master -->
+        <section id="sec-master" class="space-y-4 hidden">
+            <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="font-bold text-sm flex items-center gap-1.5 text-amber-400">
+                        <i class="fa-solid fa-sliders"></i> TBM & 위험성평가 고정 항목 통합 관리센터
+                    </h2>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 border-b pb-2">
+                    <i class="fa-solid fa-list-check text-blue-600"></i> TBM 필수 고정 점검항목 설정
+                </h3>
+                <div class="flex gap-2 text-xs pt-1">
+                    <input type="text" id="admin-new-checklist-item" placeholder="새로운 필수 점검항목 입력" class="flex-1 border rounded-lg p-2.5 bg-slate-50">
+                    <button onclick="addAdminChecklistItem()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-lg shrink-0">
+                        <i class="fa-solid fa-plus"></i> 추가
+                    </button>
+                </div>
+                <div id="admin-checklist-items-list" class="space-y-2 pt-2 text-xs"></div>
+            </div>
+        </section>
+
+        <!-- TAB 6: Admin -->
+        <section id="sec-admin" class="space-y-4 hidden">
+            <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="font-bold text-sm flex items-center gap-1.5 text-blue-400">
+                        <i class="fa-solid fa-users-gear"></i> 사내 임직원 회원 관리 센터
+                    </h2>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <div id="admin-user-list" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- TAB 7: 개인사용비용 청구서 (신규 경비청구 모듈) -->
+        <section id="sec-expense" class="space-y-4 hidden">
+            <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex items-center justify-between">
+                <div>
+                    <h2 class="font-bold text-sm flex items-center gap-1.5 text-emerald-400">
+                        <i class="fa-solid fa-receipt"></i> 개인사용비용 청구서 작성
+                    </h2>
+                    <p class="text-xs text-slate-300 mt-1">지출 내역을 입력하고 영수증 사진을 찍어 제출 및 세무 증빙을 등록합니다.</p>
+                </div>
+                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded font-bold">에프엠엘지 전용</span>
             </div>
 
-            <!-- 미리보기 보고서 양식 (결재란 담당자 서명 연동) -->
-            <div class="bg-white p-5 rounded-xl border text-xs space-y-4" id="printable-risk-area">
-                <div class="flex justify-between items-start border-b-2 border-slate-800 pb-2">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 border-b pb-2">
+                    <i class="fa-solid fa-pen-to-square text-blue-600"></i> 청구 기본 정보 및 지출 내역
+                </h3>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">에프엠엘지엘리베이터㈜ - KRAS 위험성 평가서</h2>
-                        <p class="text-[10px] text-slate-500">현장명: <span id="pdf-risk-site" class="font-bold text-slate-800"></span></p>
+                        <label class="block text-slate-500 mb-1 font-bold">결의(품의)일자</label>
+                        <input type="date" id="exp-claim-date" class="w-full border rounded-lg p-2 bg-slate-50 font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold">부서명</label>
+                        <input type="text" id="exp-dept" value="서비스사업부" class="w-full border rounded-lg p-2 bg-slate-50 font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold">청구자 (직책/성명)</label>
+                        <input type="text" id="exp-author" placeholder="과장 홍길동" class="w-full border rounded-lg p-2 bg-slate-50 font-medium">
+                    </div>
+                </div>
+
+                <div class="pt-2 space-y-3">
+                    <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
+                        <span class="text-xs font-bold text-slate-800">지출 항목 입력</span>
+                        <button onclick="addExpenseRow()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5 py-1 rounded-md font-bold flex items-center gap-1 shadow-sm">
+                            <i class="fa-solid fa-plus"></i> 항목 추가
+                        </button>
                     </div>
 
-                    <!-- 결재란 (담당자 서명 자동 연동) -->
-                    <table class="border-collapse border border-slate-400 text-center text-[9px] w-44">
-                        <tr class="bg-slate-100 font-bold">
-                            <td rowspan="2" class="border border-slate-400 w-4 bg-slate-200">결<br>재</td>
-                            <td class="border border-slate-400 p-0.5">담 당 (작성)</td>
-                            <td class="border border-slate-400 p-0.5">승 인</td>
-                        </tr>
-                        <tr class="h-10">
-                            <!-- 담당자 이름 및 결재 자동 서명 표시 -->
-                            <td id="pdf-sign-author" class="border border-slate-400 p-1 align-middle font-bold text-blue-900 bg-blue-50/50">홍길동<br><span class="text-[8px] text-blue-600">(결재서명 연동)</span></td>
-                            <td class="border border-slate-400 p-1 align-middle text-slate-300">대표이사</td>
-                        </tr>
-                    </table>
+                    <div id="expense-items-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-1"></div>
                 </div>
 
-                <div>
-                    <span class="font-bold text-slate-700 block mb-1">■ 위험성 평가 확인 근로자 서명</span>
-                    <div id="pdf-risk-worker-signs" class="flex flex-wrap gap-2 p-2 bg-slate-50 border rounded text-[10px]"></div>
+                <div class="pt-3 border-t flex items-center justify-between">
+                    <div class="text-xs">
+                        <span class="text-slate-500 font-bold">총 지출 금액:</span>
+                        <span id="exp-total-amount" class="text-base font-bold text-blue-600 ml-1">0 원</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="saveExpenseData()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-floppy-disk text-amber-400"></i> 청구서 저장
+                        </button>
+                        <button onclick="exportExpenseExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel"></i> 엑셀 출력
+                        </button>
+                    </div>
                 </div>
+            </div>
+        </section>
 
-                <table class="w-full border-collapse border border-slate-300 text-[10px] text-center">
-                    <thead>
-                        <tr class="bg-slate-100 font-bold">
-                            <th class="border border-slate-300 p-1.5">작업공정</th>
-                            <th class="border border-slate-300 p-1.5">유해위험요인</th>
-                            <th class="border border-slate-300 p-1.5 w-16">위험도</th>
-                            <th class="border border-slate-300 p-1.5">개선대책</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pdf-risk-tbody"></tbody>
-                </table>
+        <!-- TAB 8: Profile -->
+        <section id="sec-profile" class="space-y-4 hidden">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex items-center gap-3 border-b pb-4">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-2xl font-bold">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-slate-800 text-base" id="profile-name">홍길동</h2>
+                        <p class="text-xs text-slate-500" id="profile-dept">에프엠엘지엘리베이터㈜ / 승강기유지관리팀</p>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="w-full bg-rose-50 text-rose-600 font-bold text-xs py-3 rounded-xl">로그아웃</button>
             </div>
         </section>
 
     </main>
 
+    <!-- JavaScript Script Section -->
     <script>
+        // DB Setup
         const db = new Dexie('ElevatorRiskAppDB_v5');
         db.version(1).stores({
             items: '++id, step, hazard, likelihood, severity, actionPlan, photo',
-            tbmWorkers: '++id, name, sigData',
-            riskWorkers: '++id, name, sigData',
-            reports: '++id, siteName, workDate, tbmTime, processName, tbmLeader, author, workersList, notes, createdAt'
+            workers: '++id, name, sigData',
+            reports: '++id, siteName, workDate, tbmTime, processName, tbmLeader, author, workersList, notes, createdAt',
+            expenses: '++id, claimDate, dept, author, items, totalAmount, createdAt'
+        });
+
+        let currentUser = null;
+        let expenseRowCount = 0;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            const claimInput = document.getElementById('exp-claim-date');
+            if (claimInput) claimInput.value = today;
+            
+            addExpenseRow(); // 초기 경비 항목 1개 생성
+            checkLoginSession();
         });
 
         function switchTab(tab) {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`sec-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).classList.add('active');
-            if (tab === 'export') preparePdfPreview();
+            
+            const targetSec = document.getElementById(`sec-${tab}`);
+            const targetTab = document.getElementById(`tab-${tab}`);
+            if (targetSec) targetSec.classList.remove('hidden');
+            if (targetTab) targetTab.classList.add('active');
         }
 
-        function updateEvaluatorName(val) {
-            const authorBox = document.getElementById('pdf-sign-author');
-            if (authorBox) authorBox.innerHTML = `<b>${val}</b><br><span class="text-[8px] text-blue-600">(결재서명 연동)</span>`;
+        function checkLoginSession() {
+            try {
+                const savedUser = localStorage.getItem('fmlg_current_user');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    document.getElementById('auth-modal').classList.add('hidden');
+                    const expAuthor = document.getElementById('exp-author');
+                    if (expAuthor && currentUser) expAuthor.value = currentUser.name;
+                }
+            } catch(e) {}
         }
 
-        /* --- TBM 근로자 서명 --- */
-        async function renderTbmWorkers() {
-            const container = document.getElementById('tbm-workers-container');
-            if(!container) return;
-            const workers = await db.tbmWorkers.toArray();
-            container.innerHTML = '';
-            workers.forEach(w => {
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="p-2 border rounded bg-slate-50 text-xs space-y-1">
-                        <div class="flex justify-between items-center">
-                            <input type="text" value="${w.name}" onchange="db.tbmWorkers.update(${w.id}, {name: this.value})" class="font-bold border rounded px-1.5 py-0.5">
-                            <button onclick="db.tbmWorkers.delete(${w.id}); renderTbmWorkers();" class="text-rose-500 text-[10px]">삭제</button>
-                        </div>
-                        <canvas id="tbm-sig-${w.id}" class="sig-pad w-full h-16"></canvas>
-                    </div>
-                `);
-            });
-            setTimeout(() => {
-                workers.forEach(w => {
-                    const canvas = document.getElementById(`tbm-sig-${w.id}`);
-                    if (canvas) {
-                        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-                        const pad = new SignaturePad(canvas);
-                        if (w.sigData) pad.fromDataURL(w.sigData);
-                        pad.onEnd = () => db.tbmWorkers.update(w.id, { sigData: pad.toDataURL() });
-                    }
-                });
-            }, 50);
+        function handleLogin() {
+            const id = document.getElementById('login-id').value.trim();
+            const pw = document.getElementById('login-pw').value.trim();
+            if (!id || !pw) return alert("아이디와 비밀번호를 입력하세요.");
+            
+            currentUser = { name: id.split('@')[0], username: id };
+            localStorage.setItem('fmlg_current_user', JSON.stringify(currentUser));
+            document.getElementById('auth-modal').classList.add('hidden');
+            alert("로그인 되었습니다.");
         }
 
-        async function addTbmWorkerCard() {
-            await db.tbmWorkers.add({ name: 'TBM 근로자', sigData: null });
-            renderTbmWorkers();
+        function handleLogout() {
+            localStorage.removeItem('fmlg_current_user');
+            location.reload();
         }
 
-        /* --- 위험성 평가 근로자 서명 --- */
-        async function renderRiskWorkers() {
-            const container = document.getElementById('risk-workers-container');
-            if(!container) return;
-            const workers = await db.riskWorkers.toArray();
-            container.innerHTML = '';
-            workers.forEach(w => {
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="p-2 border rounded bg-slate-50 text-xs space-y-1">
-                        <div class="flex justify-between items-center">
-                            <input type="text" value="${w.name}" onchange="db.riskWorkers.update(${w.id}, {name: this.value})" class="font-bold border rounded px-1.5 py-0.5">
-                            <button onclick="db.riskWorkers.delete(${w.id}); renderRiskWorkers();" class="text-rose-500 text-[10px]">삭제</button>
-                        </div>
-                        <canvas id="risk-sig-${w.id}" class="sig-pad w-full h-16"></canvas>
-                    </div>
-                `);
-            });
-            setTimeout(() => {
-                workers.forEach(w => {
-                    const canvas = document.getElementById(`risk-sig-${w.id}`);
-                    if (canvas) {
-                        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
-                        const pad = new SignaturePad(canvas);
-                        if (w.sigData) pad.fromDataURL(w.sigData);
-                        pad.onEnd = () => db.riskWorkers.update(w.id, { sigData: pad.toDataURL() });
-                    }
-                });
-            }, 50);
-        }
+        // --- 경비 청구 전용 로직 ---
+        function addExpenseRow() {
+            expenseRowCount++;
+            const container = document.getElementById('expense-items-container');
+            if (!container) return;
 
-        async function addRiskWorkerCard() {
-            await db.riskWorkers.add({ name: '평가 확인 근로자', sigData: null });
-            renderRiskWorkers();
-        }
+            const rowId = `exp-row-${expenseRowCount}`;
+            const today = new Date().toISOString().split('T')[0];
 
-        /* --- 위험성 평가 리스트 --- */
-        async function renderRiskCards() {
-            const container = document.getElementById('risk-card-container');
-            if(!container) return;
-            const items = await db.items.toArray();
-            container.innerHTML = '';
-            items.forEach(item => {
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="bg-white p-3.5 rounded-xl border text-xs space-y-2 shadow-sm">
-                        <div class="flex justify-between font-bold">
-                            <input type="text" value="${item.step}" onchange="db.items.update(${item.id}, {step: this.value})" class="border rounded p-1 w-2/3">
-                            <button onclick="db.items.delete(${item.id}); renderRiskCards();" class="text-rose-500 text-[10px]">삭제</button>
+            const html = `
+                <div id="${rowId}" class="p-3 bg-white border rounded-xl space-y-2 relative text-xs shadow-sm">
+                    <button onclick="removeExpenseRow('${rowId}')" class="absolute top-2 right-2 text-slate-400 hover:text-rose-500 text-xs">
+                        <i class="fa-solid fa-xmark"></i> 삭제
+                    </button>
+                    
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                        <div>
+                            <label class="block text-slate-500 mb-0.5">사용 날짜</label>
+                            <input type="date" value="${today}" class="exp-item-date w-full border rounded p-1.5 bg-slate-50 font-medium">
                         </div>
                         <div>
-                            <label class="block text-[10px] text-slate-400">위험요인</label>
-                            <input type="text" value="${item.hazard}" onchange="db.items.update(${item.id}, {hazard: this.value})" class="w-full border rounded p-1">
+                            <label class="block text-slate-500 mb-0.5">증빙 서류</label>
+                            <select class="exp-item-proof w-full border rounded p-1.5 bg-slate-50 font-bold">
+                                <option value="현금영수증">현금영수증</option>
+                                <option value="신용카드">신용카드</option>
+                                <option value="체크카드">체크카드</option>
+                                <option value="간이영수증">간이영수증</option>
+                            </select>
                         </div>
                         <div>
-                            <label class="block text-[10px] text-slate-400">개선대책</label>
-                            <input type="text" value="${item.actionPlan}" onchange="db.items.update(${item.id}, {actionPlan: this.value})" class="w-full border rounded p-1">
+                            <label class="block text-slate-500 mb-0.5">계정과목</label>
+                            <select class="exp-item-account w-full border rounded p-1.5 bg-slate-50 font-bold text-blue-900">
+                                <option value="운반비">운반비</option>
+                                <option value="사무용품비">사무용품비</option>
+                                <option value="복리후생비">복리후생비</option>
+                                <option value="EL소모품비">EL소모품비</option>
+                                <option value="여비교통비">여비교통비</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-500 mb-0.5">지출 금액(원)</label>
+                            <input type="number" oninput="calculateExpenseTotal()" placeholder="0" class="exp-item-amount w-full border rounded p-1.5 bg-slate-50 font-bold text-right text-blue-600">
                         </div>
                     </div>
-                `);
-            });
-        }
 
-        async function addAssessmentCard() {
-            await db.items.add({ step: '승강기 점검 작업', hazard: '감전 및 끼임 위험', likelihood: 1, severity: 2, actionPlan: '절연장갑 착용 및 수동운전' });
-            renderRiskCards();
-        }
-
-        async function saveTbmDataOffline() { alert('✅ TBM 데이터가 독립 저장되었습니다!'); }
-        async function saveRiskDataOffline() { alert('✅ 위험성 평가서가 독립 저장되었습니다!'); }
-
-        /* --- PDF 미리보기 결재 서명 연동 --- */
-        async function preparePdfPreview() {
-            const siteName = document.getElementById('risk-site-name').value;
-            const evaluator = document.getElementById('risk-evaluator').value;
-
-            document.getElementById('pdf-risk-site').textContent = siteName;
-            document.getElementById('pdf-sign-author').innerHTML = `<b>${evaluator}</b><br><span class="text-[8px] text-blue-600">(결재서명 연동)</span>`;
-
-            const workers = await db.riskWorkers.toArray();
-            const signsContainer = document.getElementById('pdf-risk-worker-signs');
-            signsContainer.innerHTML = '';
-            workers.forEach(w => {
-                signsContainer.insertAdjacentHTML('beforeend', `
-                    <div class="flex items-center gap-1 border bg-white px-2 py-1 rounded">
-                        <span><b>${w.name}:</b></span>
-                        ${w.sigData ? `<img src="${w.sigData}" class="h-5">` : '<span class="text-slate-400">(서명없음)</span>'}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div class="sm:col-span-2">
+                            <label class="block text-slate-500 mb-0.5">내역 (사용 사유/거래처)</label>
+                            <input type="text" placeholder="예: 화물운반비(한결상사)" class="exp-item-desc w-full border rounded p-1.5 bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-slate-500 mb-0.5">승인번호 / 비고</label>
+                            <input type="text" placeholder="예: 성모#7" class="exp-item-note w-full border rounded p-1.5 bg-slate-50">
+                        </div>
                     </div>
-                `);
-            });
 
-            const items = await db.items.toArray();
-            const tbody = document.getElementById('pdf-risk-tbody');
-            tbody.innerHTML = '';
-            items.forEach(item => {
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr>
-                        <td class="border p-1 font-bold">${item.step}</td>
-                        <td class="border p-1 text-left">${item.hazard}</td>
-                        <td class="border p-1 font-bold bg-amber-50">중(보통)</td>
-                        <td class="border p-1 text-left">${item.actionPlan}</td>
-                    </tr>
-                `);
-            });
+                    <div>
+                        <label class="block text-slate-500 mb-0.5"><i class="fa-solid fa-camera text-blue-600"></i> 영수증 사진 촬영/첨부</label>
+                        <input type="file" accept="image/*" capture="environment" class="exp-item-file text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700">
+                    </div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', html);
+            calculateExpenseTotal();
         }
 
-        function generateRiskPDF() {
-            const element = document.getElementById('printable-risk-area');
-            html2pdf().set({ margin: 10, filename: '위험성평가서_보고서.pdf' }).from(element).save();
+        function removeExpenseRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) row.remove();
+            calculateExpenseTotal();
         }
 
-        function generateTbmPDF() { alert('📄 TBM 일일 기록부 PDF가 다운로드됩니다.'); }
-        function sendEmailReport() { alert('📧 이메일 작성 창이 연동됩니다.'); }
+        function calculateExpenseTotal() {
+            const amountInputs = document.querySelectorAll('.exp-item-amount');
+            let total = 0;
+            amountInputs.forEach(input => {
+                total += parseInt(input.value) || 0;
+            });
+            document.getElementById('exp-total-amount').textContent = total.toLocaleString() + ' 원';
+        }
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            if (await db.items.count() === 0) {
-                await db.items.add({ step: '기계실 제어반 점검', hazard: '내부 점검 중 감전 위험', likelihood: 1, severity: 2, actionPlan: '절연장갑 착용 및 전원 확인' });
-            }
-            if (await db.riskWorkers.count() === 0) {
-                await db.riskWorkers.add({ name: '김안전 (작업자)', sigData: null });
-            }
-            if (await db.tbmWorkers.count() === 0) {
-                await db.tbmWorkers.add({ name: '홍길동 (리더)', sigData: null });
-            }
-            renderTbmWorkers();
-            renderRiskWorkers();
-            renderRiskCards();
-            updateEvaluatorName(document.getElementById('risk-evaluator').value);
-        });
+        async function saveExpenseData() {
+            const claimDate = document.getElementById('exp-claim-date').value;
+            const dept = document.getElementById('exp-dept').value;
+            const author = document.getElementById('exp-author').value;
+
+            const rows = document.querySelectorAll('#expense-items-container > div');
+            if (rows.length === 0) return alert("저장할 지출 내역이 없습니다.");
+
+            const itemList = [];
+            let totalAmount = 0;
+
+            rows.forEach(row => {
+                const date = row.querySelector('.exp-item-date').value;
+                const proof = row.querySelector('.exp-item-proof').value;
+                const account = row.querySelector('.exp-item-account').value;
+                const amount = parseInt(row.querySelector('.exp-item-amount').value) || 0;
+                const desc = row.querySelector('.exp-item-desc').value;
+                const note = row.querySelector('.exp-item-note').value;
+
+                totalAmount += amount;
+                itemList.push({ date, proof, account, amount, desc, note });
+            });
+
+            await db.expenses.add({
+                claimDate, dept, author, items: itemList, totalAmount, createdAt: new Date().toISOString()
+            });
+
+            alert(`✅ 총 ${rows.length}건(${totalAmount.toLocaleString()}원)의 개인사용비용 청구가 성공적으로 저장되었습니다!`);
+        }
+
+        function exportExpenseExcel() {
+            const claimDate = document.getElementById('exp-claim-date').value;
+            const author = document.getElementById('exp-author').value || '직원';
+            const rows = document.querySelectorAll('#expense-items-container > div');
+
+            if (rows.length === 0) return alert("출력할 내역이 없습니다.");
+
+            const excelData = [];
+            let totalSum = 0;
+
+            rows.forEach((row, idx) => {
+                const date = row.querySelector('.exp-item-date').value;
+                const proof = row.querySelector('.exp-item-proof').value;
+                const account = row.querySelector('.exp-item-account').value;
+                const amount = parseInt(row.querySelector('.exp-item-amount').value) || 0;
+                const desc = row.querySelector('.exp-item-desc').value;
+                const note = row.querySelector('.exp-item-note').value;
+
+                totalSum += amount;
+                excelData.push({
+                    "NO": idx + 1,
+                    "날짜": date,
+                    "증빙서류": proof,
+                    "계정과목": account,
+                    "내역": desc,
+                    "금액": amount,
+                    "승인번호/비고": note
+                });
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "개인사용비용청구서");
+
+            XLSX.writeFile(workbook, `개인사용비용청구서_${author}_${claimDate}.xlsx`);
+            alert(`📊 엑셀 다운로드가 완료되었습니다!`);
+        }
     </script>
 </body>
 </html>

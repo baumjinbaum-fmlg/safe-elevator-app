@@ -273,10 +273,10 @@
 
     <!-- 숨김 PDF 출력 레이아웃 -->
     <div style="position: fixed; top: -9999px; left: -9999px;">
-        <div id="printable-tbm-pdf" class="p-8 bg-white text-slate-900 text-xs space-y-3 font-sans" style="width: 210mm;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 6px;">
+        <div id="printable-tbm-pdf" class="p-8 bg-white text-slate-900 text-xs space-y-4 font-sans" style="width: 210mm;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px;">
                 <div>
-                    <h1 class="text-lg font-bold">위험성평가 & TBM 현장 점검 보고서</h1>
+                    <h1 class="text-lg font-bold">TBM 현장 점검 보고서</h1>
                     <p class="text-[11px] text-slate-500 mt-0.5">에프엠엘지엘리베이터㈜ 안전관리팀</p>
                 </div>
             </div>
@@ -287,8 +287,21 @@
                     <td class="border border-slate-400 p-1.5 w-1/6">작업일자</td>
                     <td id="pdf-tbm-date" class="border border-slate-400 p-1.5 w-2/6"></td>
                 </tr>
+                <tr>
+                    <td class="border border-slate-400 p-1.5 font-bold bg-slate-50">공종구분</td>
+                    <td id="pdf-tbm-process" class="border border-slate-400 p-1.5"></td>
+                    <td class="border border-slate-400 p-1.5 font-bold bg-slate-50">TBM 리더</td>
+                    <td id="pdf-tbm-leader" class="border border-slate-400 p-1.5"></td>
+                </tr>
             </table>
-            <div id="pdf-tbm-notes" class="p-2 border bg-slate-50 text-xs"></div>
+            <div>
+                <div class="font-bold mb-1">■ 특이사항</div>
+                <div id="pdf-tbm-notes" class="p-2 border border-slate-300 bg-slate-50 text-xs min-h-[40px]"></div>
+            </div>
+            <div>
+                <div class="font-bold mb-1">■ 참석 근로자 및 서명</div>
+                <div id="pdf-tbm-workers" class="flex flex-wrap gap-2"></div>
+            </div>
         </div>
 
         <div id="printable-kras-pdf" class="p-8 bg-white text-slate-900 text-xs space-y-3 font-sans" style="width: 210mm;">
@@ -313,7 +326,7 @@
     </div>
 
     <script>
-        const db = new Dexie('ElevatorRiskAppDB_v51');
+        const db = new Dexie('ElevatorRiskAppDB_v52');
         db.version(1).stores({
             items: '++id, category, processName, step, hazard, likelihood, severity, actionPlan, afterLikelihood, afterSeverity',
             workers: '++id, name',
@@ -625,11 +638,23 @@
         async function generateTbmReportPDF() {
             const siteName = document.getElementById('tbm-site-name').value;
             const workDate = document.getElementById('tbm-work-date').value;
+            const processName = document.getElementById('tbm-process-name').value;
+            const tbmLeader = document.getElementById('tbm-leader').value;
             const notes = document.getElementById('tbm-notes').value;
 
             document.getElementById('pdf-tbm-site').textContent = siteName;
             document.getElementById('pdf-tbm-date').textContent = workDate;
-            document.getElementById('pdf-tbm-notes').innerHTML = `<b>특이사항:</b> ${notes || '없음'}`;
+            document.getElementById('pdf-tbm-process').textContent = processName;
+            document.getElementById('pdf-tbm-leader').textContent = tbmLeader;
+            document.getElementById('pdf-tbm-notes').textContent = notes || '없음';
+
+            let workers = await db.workers.toArray();
+            let workersPdfHtml = workers.map(w => {
+                let pad = signaturePadsInstances[w.id];
+                let sigImg = (pad && !pad.isEmpty()) ? pad.toDataURL() : '';
+                return `<div style="display:inline-block; border:1px solid #cbd5e1; padding:6px; margin:4px; text-align:center; width:100px; background:#fff;"><div style="font-weight:bold; font-size:10px;">${w.name}</div>${sigImg ? `<img src="${sigImg}" style="height:30px; margin:2px auto; display:block;">` : '<div style="font-size:9px; color:#94a3b8;">서명없음</div>'}</div>`;
+            }).join('');
+            document.getElementById('pdf-tbm-workers').innerHTML = workersPdfHtml;
 
             const opt = {
                 margin: 0,

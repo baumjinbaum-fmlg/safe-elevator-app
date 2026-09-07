@@ -6,1235 +6,245 @@
     <title>승강기 통합 관리 시스템 - 에프엠엘지엘리베이터㈜</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #0f172a; color: #e2e8f0; }
-        .table-grid { width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; }
-        .table-grid th, .table-grid td { border: 1px solid #334155; padding: 8px 10px; }
-        .table-grid th { background-color: #1e293b; color: #f8fafc; font-weight: 700; text-align: center; }
-        .table-grid tr:hover { background-color: #1e293b; }
-        input, select, textarea { background-color: #1e293b !important; color: #f8fafc !important; border-color: #475569 !important; }
-        input::placeholder { color: #64748b !important; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        .tab-btn.active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
     </style>
 </head>
-<body class="pb-24">
+<body class="pb-28">
 
     <script>
-        const GOOGLE_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbyuUbe2XcfTZyk8CS3SqQfr-mwaYBVAj382arBxtxbj5YsTTT10LZ4BvTdTA_L0S1Tm/exec";
+        // 여기에 구글 앱스 스크립트 웹 앱 URL을 입력해주세요.
+        const GOOGLE_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbwVOB_nh6A3SySPKjrq_i07MAWmeQyByiYOucVEr3S3FexSHd4GNk2GVjiE8MgpaHil/exec";
     </script>
 
-    <!-- 로그인 모달 -->
-    <div id="auth-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5 border border-slate-800">
-            <div class="text-center space-y-1">
-                <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl font-bold mx-auto shadow-md">
-                    <i class="fa-solid fa-elevator"></i>
-                </div>
-                <h2 class="text-base font-bold text-white">에프엠엘지엘리베이터㈜</h2>
-                <p class="text-xs text-slate-400">실시간 통합 관리 시스템</p>
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div>
+                <h1 class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-elevator text-blue-400"></i> 에프엠엘지엘리베이터㈜
+                </h1>
+                <p class="text-xs text-slate-300">승강기 통합 관리 시스템</p>
             </div>
-            <div class="space-y-3 text-xs">
-                <div><label class="block font-bold text-slate-300 mb-1">아이디 (이메일)</label><input type="text" id="login-id" class="w-full border rounded-lg p-2.5" value="admin@fmlg.co.kr"></div>
-                <div><label class="block font-bold text-slate-300 mb-1">비밀번호</label><input type="password" id="login-pw" class="w-full border rounded-lg p-2.5" value="123"></div>
-                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg transition">로그인</button>
+            <div>
+                <a href="risk.html" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-halved"></i> 위험성평가·TBM 바로가기
+                </a>
             </div>
         </div>
-    </div>
 
-    <!-- 상단 네비게이션 헤더 -->
-    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 class="text-sm font-bold text-white flex items-center gap-2">
-                <i class="fa-solid fa-elevator text-blue-400"></i> 에프엠엘지엘리베이터㈜
-            </h1>
-            <div class="flex items-center gap-2 overflow-x-auto">
-                <button onclick="switchMainTab('search')" id="nav-btn-search" class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow">승강기 검색</button>
-                <button onclick="switchMainTab('repair')" id="nav-btn-repair" class="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-slate-700">고장 수리</button>
-                <button onclick="switchMainTab('defect')" id="nav-btn-defect" class="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-slate-700">하자 접수</button>
-                <button onclick="switchMainTab('koelsa')" id="nav-btn-koelsa" class="bg-purple-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow transition"><i class="fa-solid fa-calendar-days"></i> 만료일 갱신</button>
-                <button onclick="switchMainTab('users')" id="nav-btn-users" class="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-slate-700 hidden"><i class="fa-solid fa-users-gear"></i> 직원관리</button>
-                <button onclick="openProfileModal()" class="bg-slate-800 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-bold border border-slate-700 hover:bg-slate-700 transition" title="내 정보"><i class="fa-solid fa-id-card"></i> 내 정보</button>
-                <button onclick="handleLogout()" class="bg-rose-950/50 text-rose-400 text-xs px-2.5 py-1.5 rounded-lg font-bold border border-rose-900/50 transition"><i class="fa-solid fa-right-from-bracket"></i></button>
-            </div>
-        </div>
+        <nav class="flex bg-slate-800 text-slate-300 text-xs border-t border-slate-700 overflow-x-auto">
+            <button onclick="switchTab('register')" id="tab-register" class="tab-btn active flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-triangle-exclamation block text-sm mb-0.5 text-amber-400"></i> 1. 고장·하자 접수</button>
+            <button onclick="switchTab('list')" id="tab-list" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-list-check block text-sm mb-0.5"></i> 2. 접수 및 처리이력</button>
+            <button onclick="switchTab('contacts')" id="tab-contacts" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-address-book block text-sm mb-0.5 text-emerald-400"></i> 3. 비상연락망</button>
+        </nav>
     </header>
 
-    <main class="max-w-6xl mx-auto p-4 space-y-6">
+    <main class="max-w-5xl mx-auto p-4 space-y-4">
 
-        <!-- TAB 1: 승강기 현장 검색 및 목록 조회 -->
-        <section id="sec-search-tab" class="space-y-6">
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <h2 class="font-bold text-white text-xs border-l-4 border-blue-500 pl-2 py-0.5">승강기 현장 통합 검색</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-slate-800/60 p-3 rounded-lg border border-slate-700 items-end">
+        <!-- TAB 1: 고장수리 및 하자접수 등록 -->
+        <section id="sec-register" class="space-y-4">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 border-b pb-3">
+                    <i class="fa-solid fa-file-pen text-amber-500"></i> 승강기 고장수리 및 하자 접수 등록
+                </h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                        <label class="block text-[10px] text-slate-400 font-bold mb-1">건물명 (현장명) / 번호</label>
-                        <input type="text" id="filter-site-name" placeholder="현장명 또는 승강기번호" class="border rounded p-1.5 w-full">
+                        <label class="block text-slate-600 font-bold mb-1">현장명</label>
+                        <input type="text" id="reg-site" value="에스스퀘어" class="w-full border rounded-lg p-2.5 bg-slate-50 font-medium">
                     </div>
                     <div>
-                        <label class="block text-[10px] text-slate-400 font-bold mb-1">계약형태 / 제조사</label>
-                        <input type="text" id="filter-meta" placeholder="계약형태 또는 제조사" class="border rounded p-1.5 w-full">
+                        <label class="block text-slate-600 font-bold mb-1 text-blue-600">승강기 호기 (예: 1호기)</label>
+                        <input type="text" id="reg-elevator" value="1호기" class="w-full border rounded-lg p-2.5 bg-blue-50 font-bold text-blue-900">
                     </div>
-                    <div class="flex gap-1">
-                        <button onclick="searchSites()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-1.5 px-3 rounded w-full transition shadow">검색</button>
-                        <button onclick="resetSiteSearch()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs py-1.5 px-3 rounded w-full transition">초기화</button>
-                        <button onclick="exportFilteredSitesToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-1.5 px-3 rounded w-full transition shadow">엑셀출력</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <h2 class="font-bold text-white text-xs border-l-4 border-amber-500 pl-2 py-0.5">승강기 목록 조회 결과</h2>
-                    <div class="flex gap-2">
-                        <span id="elevator-total-count" class="text-xs font-bold text-blue-400 bg-blue-950/60 border border-blue-900 px-2 py-1 rounded">총 0건</span>
-                        <button onclick="openNewSiteModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-[11px] font-bold transition shadow"><i class="fa-solid fa-plus"></i> 현장 개별 등록</button>
-                        <button onclick="openUploadModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 px-3 py-1 rounded text-[11px] font-bold transition"><i class="fa-solid fa-file-excel"></i> 엑셀 일괄 등록</button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="table-grid">
-                        <thead>
-                            <tr>
-                                <th class="w-20">승강기번호</th>
-                                <th class="w-24">프로젝트번호</th>
-                                <th class="w-1/6">건물명 (현장명)</th>
-                                <th class="w-16">제조사</th>
-                                <th class="w-20">계약형태</th>
-                                <th>주소</th>
-                                <th class="w-20">설치일</th>
-                                <th class="w-20">검사만료일</th>
-                                <th class="w-32">현장담당자 / 엔지니어연락처</th>
-                                <th class="w-16">관리</th>
-                            </tr>
-                        </thead>
-                        <tbody id="elevator-table-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 2: 고장 수리 관리 -->
-        <section id="sec-repair-tab" class="space-y-6 hidden">
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <h2 class="font-bold text-white text-xs border-l-4 border-purple-500 pl-2 py-0.5">승강기 고장 수리 등록</h2>
-                <div class="bg-purple-950/40 border border-purple-900/60 p-3 rounded-lg flex items-center justify-between">
                     <div>
-                        <span class="text-xs font-bold text-purple-300 block"><i class="fa-solid fa-magnifying-glass-location"></i> 현장 및 승강기 번호(호기) 찾기</span>
-                        <span class="text-[10px] text-slate-400">버튼을 눌러 현장을 선택하세요.</span>
+                        <label class="block text-slate-600 font-bold mb-1">접수 일자</label>
+                        <input type="date" id="reg-date" class="w-full border rounded-lg p-2.5 bg-slate-50 font-medium">
                     </div>
-                    <button onclick="openSitePickerModal('repair')" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow transition whitespace-nowrap">
-                        <i class="fa-solid fa-search"></i> 현장/호기 선택
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">건물명 (현장명)</label><input type="text" id="rep-site" placeholder="현장명" class="border rounded p-2 w-full font-bold"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">승강기 번호 (호기)</label><input type="text" id="rep-no" placeholder="승강기 번호" class="border rounded p-2 w-full font-bold text-blue-400"></div>
                     <div>
-                        <label class="block text-slate-300 font-bold mb-1">유·무상 구분</label>
-                        <select id="rep-chargable" class="border rounded p-2 w-full">
-                            <option value="무상">무상 (AS)</option>
-                            <option value="유상">유상 (청구)</option>
+                        <label class="block text-slate-600 font-bold mb-1">업무 구분</label>
+                        <select id="reg-type" class="w-full border rounded-lg p-2.5 bg-amber-50 font-bold text-amber-900">
+                            <option value="고장수리접수">🚨 고장수리 및 긴급출동 접수</option>
+                            <option value="하자접수">🛠️ 하자보수 접수</option>
+                            <option value="일반점검">📋 일반 정기/수시 점검</option>
                         </select>
                     </div>
+                    <div class="col-span-2">
+                        <label class="block text-slate-600 font-bold mb-1">접수자 / 담당자 성명</label>
+                        <input type="text" id="reg-author" value="홍길동 (부장)" class="w-full border rounded-lg p-2.5 bg-slate-50 font-medium">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-slate-600 font-bold mb-1">고장 내용 또는 하자 접수 상세 내용</label>
+                        <textarea id="reg-content" placeholder="고장 증상 및 현장 특이사항을 입력하세요" class="w-full border rounded-lg p-2.5 bg-slate-50 h-24 font-medium"></textarea>
+                    </div>
                 </div>
 
+                <button onclick="saveIntegrationRecord()" class="w-full bg-slate-900 hover:bg-black text-white font-bold text-xs py-3 rounded-xl shadow">
+                    <i class="fa-solid fa-cloud-arrow-up text-amber-400"></i> 접수 내용 저장 및 구글시트 전송
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 2: 접수 및 처리이력 조회 -->
+        <section id="sec-list" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-magnifying-glass text-blue-600"></i> 고장·하자 접수 이력 검색</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <input type="text" id="search-keyword" oninput="renderIntegrationList()" placeholder="현장명 또는 호기 검색 (예: 1호기)" class="border rounded-lg p-2.5 bg-slate-50">
+                    <input type="date" id="search-date-filter" oninput="renderIntegrationList()" class="border rounded-lg p-2.5 bg-slate-50">
+                </div>
+            </div>
+            <div id="integration-list-container" class="space-y-3"></div>
+        </section>
+
+        <!-- TAB 3: 비상연락망 -->
+        <section id="sec-contacts" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 text-emerald-600 border-b pb-2">
+                    <i class="fa-solid fa-address-book"></i> 임직원 및 협력사 비상연락망 관리
+                </h3>
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">접수일시</label><input type="datetime-local" id="rep-receipt" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">도착일시</label><input type="datetime-local" id="rep-arrive" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">구출일시</label><input type="datetime-local" id="rep-rescue" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">완료일시</label><input type="datetime-local" id="rep-complete" class="border rounded p-2 w-full"></div>
+                    <input type="text" id="contact-name" placeholder="이름" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-dept" placeholder="소속/부서" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-phone" placeholder="전화번호" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-role" placeholder="직급/역할" class="border rounded-lg p-2 bg-slate-50">
                 </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">교체 부품명</label><input type="text" id="rep-part" placeholder="부품명" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">수량</label><input type="text" id="rep-qty" placeholder="수량" class="border rounded p-2 w-full"></div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs bg-slate-800/40 p-2.5 rounded-lg border border-slate-700">
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">작업자 1</label><select id="rep-eng-1" class="border rounded p-1.5 w-full engineer-select"><option value="">선택 안함</option></select></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">작업자 2</label><select id="rep-eng-2" class="border rounded p-1.5 w-full engineer-select"><option value="">선택 안함</option></select></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">작업자 3</label><select id="rep-eng-3" class="border rounded p-1.5 w-full engineer-select"><option value="">선택 안함</option></select></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">작업자 4</label><select id="rep-eng-4" class="border rounded p-1.5 w-full engineer-select"><option value="">선택 안함</option></select></div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">고장 증상</label><input type="text" id="rep-symptom" placeholder="고장 증상" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">조치 내역</label><input type="text" id="rep-action" placeholder="조치 내역" class="border rounded p-2 w-full"></div>
-                </div>
-
-                <div class="text-xs bg-slate-800/60 p-3 rounded-lg border border-slate-700 space-y-2">
-                    <label class="block font-bold text-purple-300"><i class="fa-solid fa-camera"></i> 현장 사진 첨부 (최대 5장)</label>
-                    <input type="file" id="rep-photos" accept="image/*" multiple class="w-full border rounded p-1.5 text-xs bg-slate-900">
-                </div>
-
-                <button onclick="prepareReviewModal('repair')" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-2.5 rounded-lg shadow transition">고장 수리 등록 확인</button>
+                <button onclick="addEmergencyContact()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg shadow">비상연락망 등록</button>
             </div>
-
-            <!-- 고장 수리 검색 -->
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <h2 class="font-bold text-white text-xs border-l-4 border-blue-500 pl-2 py-0.5">고장 수리 이력 조회 및 엑셀 다운로드</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs bg-slate-800/60 p-3 rounded-lg border border-slate-700 items-end">
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">시작일</label><input type="date" id="rep-search-start" class="border rounded p-1.5 w-full"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">종료일</label><input type="date" id="rep-search-end" class="border rounded p-1.5 w-full"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">현장명</label><input type="text" id="rep-search-site" placeholder="현장명 검색" class="border rounded p-1.5 w-full"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">담당 엔지니어</label><input type="text" id="rep-search-engineer" placeholder="엔지니어 이름" class="border rounded p-1.5 w-full"></div>
-                    <div class="flex gap-1">
-                        <button onclick="searchRepairLogs()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-1.5 px-3 rounded w-full transition shadow">검색</button>
-                        <button onclick="resetRepairSearch()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs py-1.5 px-3 rounded w-full transition">초기화</button>
-                    </div>
+            <div class="bg-white p-4 rounded-xl border space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-list text-slate-700"></i> 비상연락망 목록</h3>
+                    <input type="text" id="contact-search" oninput="renderEmergencyContacts()" placeholder="이름/부서 검색" class="border rounded px-2 py-1 text-xs bg-slate-50 w-48">
                 </div>
-
-                <div class="overflow-x-auto">
-                    <table class="table-grid">
-                        <thead>
-                            <tr>
-                                <th class="w-10 text-center"><input type="checkbox" id="select-all-repairs" onclick="toggleSelectAllRepairs(this)" checked></th>
-                                <th class="w-28">일시</th>
-                                <th class="w-20">승강기번호</th>
-                                <th class="w-28">현장명</th>
-                                <th>내역</th>
-                                <th class="w-28">부품/수량/유무상</th>
-                                <th class="w-24">엔지니어</th>
-                                <th class="w-16">관리</th>
-                            </tr>
-                        </thead>
-                        <tbody id="repair-table-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 3: 하자 접수 관리 -->
-        <section id="sec-defect-tab" class="space-y-6 hidden">
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <h2 class="font-bold text-white text-xs border-l-4 border-amber-500 pl-2 py-0.5">승강기 하자 접수 등록</h2>
-                <div class="bg-amber-950/40 border border-amber-900/60 p-3 rounded-lg flex items-center justify-between">
-                    <div>
-                        <span class="text-xs font-bold text-amber-300 block"><i class="fa-solid fa-magnifying-glass-location"></i> 현장 및 승강기 번호(호기) 찾기</span>
-                        <span class="text-[10px] text-slate-400">버튼을 눌러 현장을 선택하세요.</span>
-                    </div>
-                    <button onclick="openSitePickerModal('defect')" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3.5 py-2 rounded-lg shadow transition whitespace-nowrap">
-                        <i class="fa-solid fa-search"></i> 현장/호기 선택
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">건물명 (현장명)</label><input type="text" id="def-site" placeholder="현장명" class="border rounded p-2 w-full font-bold"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">승강기 번호 (호기)</label><input type="text" id="def-no" placeholder="승강기 번호" class="border rounded p-2 w-full font-bold text-blue-400"></div>
-                    <div>
-                        <label class="block text-slate-300 font-bold mb-1">유·무상 구분</label>
-                        <select id="def-chargable" class="border rounded p-2 w-full">
-                            <option value="하자무상">하자 무상</option>
-                            <option value="하자유상">하자 유상</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">접수일시</label><input type="datetime-local" id="def-receipt" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">부품 반납일시</label><input type="datetime-local" id="def-return" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">완료일시</label><input type="datetime-local" id="def-complete" class="border rounded p-2 w-full"></div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">교체 부품명</label><input type="text" id="def-part" placeholder="부품명" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">수량</label><input type="text" id="def-qty" placeholder="수량" class="border rounded p-2 w-full"></div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs bg-slate-800/40 p-2.5 rounded-lg border border-slate-700">
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">작업자 1</label><select id="def-eng-1" class="border rounded p-1.5 w-full engineer-select"><option value="">선택 안함</option></select></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">작업자 2</label><select id="def-eng-2" class="border rounded p-1.5 w-full engineer-select"><option value="">선택 안함</option></select></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">작업자 3</label><select id="def-eng-3" class="border rounded p-1.5 w-full engineer-select"><option value="">선택 안함</option></select></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">작업자 4</label><select id="def-eng-4" class="border rounded p-1.5 w-full engineer-select"><option value="">선택 안함</option></select></div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">하자 내용</label><input type="text" id="def-content" placeholder="하자 내용" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">조치 내역</label><input type="text" id="def-action" placeholder="조치 내역" class="border rounded p-2 w-full"></div>
-                </div>
-
-                <div class="text-xs bg-slate-800/60 p-3 rounded-lg border border-slate-700 space-y-2">
-                    <label class="block font-bold text-amber-300"><i class="fa-solid fa-camera"></i> 하자 현장 사진 첨부 (최대 5장)</label>
-                    <input type="file" id="def-photos" accept="image/*" multiple class="w-full border rounded p-1.5 text-xs bg-slate-900">
-                </div>
-
-                <button onclick="prepareReviewModal('defect')" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs py-2.5 rounded-lg shadow transition">하자 접수 등록 확인</button>
-            </div>
-
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <h2 class="font-bold text-white text-xs border-l-4 border-amber-500 pl-2 py-0.5">하자 접수 이력 조회</h2>
-                <div class="overflow-x-auto">
-                    <table class="table-grid">
-                        <thead>
-                            <tr>
-                                <th class="w-10 text-center"><input type="checkbox" id="select-all-defects" onclick="toggleSelectAllDefects(this)" checked></th>
-                                <th class="w-28">일시</th>
-                                <th class="w-20">승강기번호</th>
-                                <th class="w-28">현장명</th>
-                                <th>내역</th>
-                                <th class="w-28">부품/수량/유무상</th>
-                                <th class="w-24">엔지니어</th>
-                                <th class="w-16">관리</th>
-                            </tr>
-                        </thead>
-                        <tbody id="defect-table-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 4: 검사 만료일 검색 및 일괄/개별 갱신 탭 -->
-        <section id="sec-koelsa-tab" class="space-y-6 hidden">
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-4">
-                <h2 class="font-bold text-white text-xs border-l-4 border-purple-500 pl-2 py-0.5">검사 만료월별 조회 및 일괄 갱신</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-800/60 p-3 rounded-lg border border-slate-700 items-end">
-                    <div>
-                        <label class="block text-[10px] text-slate-400 font-bold mb-1">검사만료 월 선택</label>
-                        <input type="month" id="koelsa-expire-month" onchange="searchKoelsaSites()" class="border rounded p-1.5 w-full">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-slate-400 font-bold mb-1">새로운 검사만료일 지정</label>
-                        <input type="date" id="koelsa-new-date" class="border rounded p-1.5 w-full">
-                    </div>
-                    <div>
-                        <button onclick="executeBatchExpireUpdate()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-2 px-3 rounded shadow transition">선택 항목 일괄 갱신 실행</button>
-                    </div>
-                </div>
-
-                <div class="flex justify-between items-center pt-2">
-                    <span id="koelsa-total-count" class="text-xs font-bold text-purple-400">조회된 대상: 0건</span>
-                    <button onclick="downloadExpireTemplate()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold py-1.5 px-3 rounded shadow transition"><i class="fa-solid fa-download"></i> 엑셀 일괄갱신 양식 다운로드</button>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="table-grid">
-                        <thead>
-                            <tr>
-                                <th class="w-10 text-center"><input type="checkbox" id="select-all-koelsa" onclick="toggleSelectAllKoelsa(this)" checked></th>
-                                <th class="w-20">승강기번호</th>
-                                <th class="w-1/4">건물명 (현장명)</th>
-                                <th class="w-24">현재 만료일</th>
-                                <th class="w-36">새로운 만료일 개별 지정 및 저장</th>
-                            </tr>
-                        </thead>
-                        <tbody id="koelsa-table-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 5: 직원 관리 (수정/삭제/퇴사처리 포함) -->
-        <section id="sec-users-tab" class="space-y-6 hidden">
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <h2 class="font-bold text-white text-xs border-l-4 border-emerald-500 pl-2 py-0.5">신규 직원 개별 등록</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
-                    <div><label class="block text-slate-300 font-bold mb-1">성명</label><input type="text" id="new-user-name" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">연락처</label><input type="text" id="new-user-phone" placeholder="010-0000-0000" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">아이디</label><input type="text" id="new-user-id" class="border rounded p-2 w-full"></div>
-                    <div><label class="block text-slate-300 font-bold mb-1">비밀번호</label><input type="password" id="new-user-pw" class="border rounded p-2 w-full"></div>
-                </div>
-                <button onclick="registerNewUser()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 rounded-lg shadow transition">직원 계정 등록</button>
-            </div>
-
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <h2 class="font-bold text-white text-xs border-l-4 border-purple-500 pl-2 py-0.5">직원 엑셀 일괄 등록</h2>
-                <div class="flex flex-col sm:flex-row gap-2">
-                    <button onclick="downloadUserExcelTemplate()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold py-2 px-4 rounded-xl shadow transition"><i class="fa-solid fa-download"></i> 직원 엑셀 양식 다운로드</button>
-                    <div class="flex items-center gap-2 flex-1">
-                        <input type="file" id="user-excel-file" accept=".xlsx, .xls, .csv" class="border rounded p-1.5 text-xs w-full bg-slate-800">
-                        <button onclick="handleUserExcelUpload()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2 px-4 rounded-xl shadow transition whitespace-nowrap"><i class="fa-solid fa-upload"></i> 일괄 업로드</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 p-4 space-y-3">
-                <h2 class="font-bold text-white text-xs border-l-4 border-slate-500 pl-2 py-0.5">직원 목록 및 연락처 관리</h2>
-                <div class="overflow-x-auto">
-                    <table class="table-grid">
-                        <thead>
-                            <tr>
-                                <th class="w-24">성명</th>
-                                <th class="w-28">연락처</th>
-                                <th>아이디</th>
-                                <th class="w-20">권한</th>
-                                <th class="w-20">상태</th>
-                                <th class="w-40">관리 (수정/퇴사/삭제)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="user-table-tbody"></tbody>
-                    </table>
-                </div>
+                <div id="contacts-list" class="space-y-2"></div>
             </div>
         </section>
 
     </main>
 
-    <!-- 현장 개별 등록 모달 -->
-    <div id="new-site-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-elevator text-blue-400"></i> 승강기 현장 개별 등록</h3>
-                <button onclick="closeNewSiteModal()" class="text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-800/80 p-4 rounded-xl border border-slate-700">
-                <div><label class="block text-slate-300 font-bold mb-1">건물명 (현장명) *</label><input type="text" id="ins-siteName" placeholder="예: 에스스퀘어" class="w-full border rounded p-2 font-bold"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">승강기번호 (호기) *</label><input type="text" id="ins-elevatorNo" placeholder="예: 0151107" class="w-full border rounded p-2 text-blue-400 font-bold"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">프로젝트 넘버</label><input type="text" id="ins-projectNo" placeholder="프로젝트 번호" class="w-full border rounded p-2"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">제조사</label><input type="text" id="ins-maker" placeholder="예: 현대, 오티스 등" class="w-full border rounded p-2"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">계약 형태</label><input type="text" id="ins-subCompany" placeholder="예: 자체, 유지보수 등" class="w-full border rounded p-2"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">엔지니어 연락처</label><input type="text" id="ins-phone" placeholder="담당자 연락처" class="w-full border rounded p-2"></div>
-                <div class="col-span-2"><label class="block text-slate-300 font-bold mb-1">주소</label><input type="text" id="ins-address" class="w-full border rounded p-2"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">설치일자</label><input type="date" id="ins-installDate" class="w-full border rounded p-2"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">검사만료일</label><input type="date" id="ins-expireDate" class="w-full border rounded p-2 text-rose-400 font-bold"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">현장 담당자</label><input type="text" id="ins-manager" class="w-full border rounded p-2"></div>
-                <div><label class="block text-slate-300 font-bold mb-1">모델</label><input type="text" id="ins-model" placeholder="승객용 등" class="w-full border rounded p-2"></div>
-            </div>
-            <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
-                <button onclick="submitNewSite()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-bold shadow">신규 현장 저장</button>
-                <button onclick="closeNewSiteModal()" class="bg-slate-800 text-slate-200 px-4 py-2.5 rounded-xl font-bold">취소</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 현장 선택 모달 -->
-    <div id="site-picker-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-5 space-y-4 text-xs">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-building text-purple-400"></i> 현장 및 승강기 번호(호기) 선택</h3>
-                <button onclick="closeSitePickerModal()" class="text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div><input type="text" id="picker-search-kw" oninput="filterPickerSites()" placeholder="현장명 또는 승강기번호 입력 검색..." class="w-full border rounded-lg p-2.5"></div>
-            <div class="max-h-64 overflow-y-auto space-y-1.5" id="picker-site-list"></div>
-            <div class="flex justify-end pt-2 border-t border-slate-800"><button onclick="closeSitePickerModal()" class="bg-slate-800 text-slate-300 px-4 py-2 rounded-xl font-bold">닫기</button></div>
-        </div>
-    </div>
-
-    <!-- 등록 확인 팝업 모달 -->
-    <div id="review-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-4 text-xs">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-clipboard-check text-blue-400"></i> 등록 내용 최종 확인</h3>
-                <button onclick="closeReviewModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div id="review-modal-content" class="space-y-2 bg-slate-800/80 p-4 rounded-xl border border-slate-700"></div>
-            <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button onclick="executeCloudSave()" id="review-save-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-xs font-bold shadow"><i class="fa-solid fa-cloud-arrow-up"></i> 최종 전송</button>
-                <button onclick="closeReviewModal()" class="bg-slate-800 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold">취소</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 상세 제원 수정 모달 -->
-    <div id="site-detail-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="font-bold text-white text-sm flex items-center gap-2"><i class="fa-solid fa-elevator text-blue-400"></i> 승강기 상세 제원</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div id="modal-content" class="space-y-4 text-xs"></div>
-            <div class="flex justify-between pt-3 border-t border-slate-800">
-                <button id="modal-delete-btn" onclick="" class="bg-rose-950 text-rose-400 border border-rose-900 px-4 py-2 rounded-xl text-xs font-bold"><i class="fa-solid fa-trash"></i> 삭제</button>
-                <div class="flex gap-2">
-                    <button onclick="saveSiteEdits()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow">수정 내용 저장</button>
-                    <button onclick="closeModal()" class="bg-slate-800 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold">닫기</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 직원 수정 모달 -->
-    <div id="user-edit-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4 text-xs">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                <h3 class="font-bold text-white text-sm">직원 정보 수정</h3>
-                <button onclick="closeUserEditModal()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <input type="hidden" id="edit-user-id">
-            <div><label class="block text-slate-300 font-bold mb-1">성명</label><input type="text" id="edit-user-name" class="w-full border rounded p-2"></div>
-            <div><label class="block text-slate-300 font-bold mb-1">연락처</label><input type="text" id="edit-user-phone" class="w-full border rounded p-2"></div>
-            <div><label class="block text-slate-300 font-bold mb-1">비밀번호 변경</label><input type="password" id="edit-user-pw" placeholder="변경할 때만 입력" class="w-full border rounded p-2"></div>
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="saveUserEdits()" class="bg-blue-600 text-white px-4 py-2 rounded font-bold shadow">저장</button>
-                <button onclick="closeUserEditModal()" class="bg-slate-800 text-slate-200 px-4 py-2 rounded font-bold">취소</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 엑셀 일괄 업로드 모달 -->
-    <div id="upload-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-4 text-xs">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                <h3 class="font-bold text-white text-sm">현장 일괄 엑셀 업로드</h3>
-                <button onclick="closeUploadModal()" class="text-slate-400"><i class="fa-solid fa-xmark text-base"></i></button>
-            </div>
-            <button onclick="downloadExcelTemplate()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg mb-2 shadow"><i class="fa-solid fa-download"></i> 표준 양식 다운로드</button>
-            <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="w-full border rounded p-2">
-            <div class="flex justify-end gap-2 pt-2"><button onclick="handleExcelUpload()" class="bg-emerald-600 text-white px-4 py-2 rounded font-bold shadow">업로드</button></div>
-        </div>
-    </div>
-
-    <!-- 내 정보 모달 -->
-    <div id="profile-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4 text-xs">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                <h3 class="font-bold text-white text-sm">내 정보 및 비밀번호 변경</h3>
-                <button onclick="closeProfileModal()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <input type="text" id="my-profile-id" class="w-full border rounded p-2 bg-slate-800 text-slate-400" readonly>
-            <input type="password" id="my-current-pw" placeholder="현재 비밀번호" class="w-full border rounded p-2">
-            <input type="password" id="my-new-pw" placeholder="새 비밀번호" class="w-full border rounded p-2">
-            <button onclick="updateMyPassword()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold">변경하기</button>
-        </div>
-    </div>
-
     <script>
-        let dbSites = [], dbRepairs = [], dbDefects = [], dbUsers = [];
-
-        window.addEventListener('DOMContentLoaded', async () => {
-            await loadAllCloudData();
-            checkLoginSession();
+        const db = new Dexie('ElevatorIntegrationDB_v3');
+        db.version(1).stores({
+            records: '++id, siteName, elevatorNo, workDate, workType, author, content, createdAt',
+            contacts: '++id, name, dept, phone, role'
         });
 
-        async function loadAllCloudData() {
-            if (GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT") || !GOOGLE_SCRIPT_API_URL) {
-                if (!dbUsers || dbUsers.length === 0) {
-                    dbUsers = [
-                        { id: 1, username: 'admin@fmlg.co.kr', password: '123', name: '홍길동 관리자', role: 'admin', status: 'active', phone: '010-1234-5678' }
-                    ];
-                }
-                if (!dbSites || dbSites.length === 0) {
-                    dbSites = [{ id: 1, siteName: "에스스퀘어", elevatorNo: "0151107", projectNo: "P-1001", maker: "현대", subCompany: "자체", phone: "010-1111-2222", address: "서울 강남구", installDate: "2021-12-06", expireDate: "2026-12-05", manager: "김현장" }];
-                }
-                refreshAllViews();
+        window.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('reg-date').value = new Date().toISOString().split('T')[0];
+            renderIntegrationList();
+            renderEmergencyContacts();
+        });
+
+        function switchTab(tab) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`sec-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            if (tab === 'list') renderIntegrationList();
+            if (tab === 'contacts') renderEmergencyContacts();
+        }
+
+        async function saveIntegrationRecord() {
+            const siteName = document.getElementById('reg-site').value;
+            const elevatorNo = document.getElementById('reg-elevator').value;
+            const workDate = document.getElementById('reg-date').value;
+            const workType = document.getElementById('reg-type').value;
+            const author = document.getElementById('reg-author').value;
+            const content = document.getElementById('reg-content').value;
+
+            if (!siteName || !elevatorNo) {
+                alert("현장명과 승강기 호기를 입력해주세요.");
                 return;
             }
-            try {
-                let res = await fetch(`${GOOGLE_SCRIPT_API_URL}?action=getAll`);
-                let data = await res.json();
-                dbSites = data.sites || [];
-                dbRepairs = data.repairs || [];
-                dbDefects = data.defects || [];
-                dbUsers = data.users || [];
-                if (!dbUsers.some(u => u.username === 'admin@fmlg.co.kr')) {
-                    dbUsers.unshift({ id: 1, username: 'admin@fmlg.co.kr', password: '123', name: '홍길동 관리자', role: 'admin', status: 'active', phone: '010-1234-5678' });
-                }
-                refreshAllViews();
-            } catch(e) { 
-                console.error("데이터 로드 실패, 로컬 기본값 유지", e);
-                if (!dbUsers || dbUsers.length === 0) {
-                    dbUsers = [{ id: 1, username: 'admin@fmlg.co.kr', password: '123', name: '홍길동 관리자', role: 'admin', status: 'active', phone: '010-1234-5678' }];
-                }
-                refreshAllViews();
-            }
-        }
 
-        function refreshAllViews() {
-            populateEngineerDropdowns();
-            searchSites();
-            searchKoelsaSites();
-            searchRepairLogs();
-            searchDefectLogs();
-            renderUserManagementTable();
-        }
-
-        function populateEngineerDropdowns() {
-            let options = '<option value="">선택 안함</option>';
-            dbUsers.forEach(u => { if(u.status !== 'resigned') options += `<option value="${u.name}">${u.name} (${u.phone || '번호없음'})</option>`; });
-            document.querySelectorAll('.engineer-select').forEach(sel => {
-                let cur = sel.value; sel.innerHTML = options; sel.value = cur;
-            });
-        }
-
-        function checkLoginSession() {
-            const session = localStorage.getItem('fmlg_logged_user');
-            if (session) {
-                const user = JSON.parse(session);
-                document.getElementById('auth-modal').classList.add('hidden');
-                if (user.role === 'admin') document.getElementById('nav-btn-users').classList.remove('hidden');
-            }
-        }
-
-        async function handleLogin() {
-            const id = document.getElementById('login-id').value.trim();
-            const pw = document.getElementById('login-pw').value.trim();
-            let matched = dbUsers.find(u => u.username === id && u.password === pw);
-            if (!matched && id === 'admin@fmlg.co.kr' && pw === '123') {
-                matched = { id: 999, username: 'admin@fmlg.co.kr', password: '123', name: '홍길동 관리자', role: 'admin', status: 'active', phone: '010-1234-5678' };
-            }
-            if (!matched) return alert("아이디 또는 비밀번호가 올바르지 않습니다.");
-            if (matched.status === 'resigned') return alert("퇴사 처리된 계정입니다.");
-            
-            localStorage.setItem('fmlg_logged_user', JSON.stringify(matched));
-            document.getElementById('auth-modal').classList.add('hidden');
-            if (matched.role === 'admin') document.getElementById('nav-btn-users').classList.remove('hidden');
-            refreshAllViews();
-        }
-
-        function handleLogout() { localStorage.removeItem('fmlg_logged_user'); location.reload(); }
-        function openProfileModal() {
-            const u = JSON.parse(localStorage.getItem('fmlg_logged_user') || '{}');
-            document.getElementById('my-profile-id').value = `${u.name || '사용자'} (${u.username || '-'})`;
-            document.getElementById('profile-modal').classList.remove('hidden');
-        }
-        function closeProfileModal() { document.getElementById('profile-modal').classList.add('hidden'); }
-        async function updateMyPassword() {
-            const cur = document.getElementById('my-current-pw').value;
-            const nw = document.getElementById('my-new-pw').value;
-            const u = JSON.parse(localStorage.getItem('fmlg_logged_user') || '{}');
-            let target = dbUsers.find(x => x.id === u.id);
-            if (!target && u.username === 'admin@fmlg.co.kr') target = { id: 999, username: 'admin@fmlg.co.kr', password: '123', name: '홍길동 관리자', role: 'admin', status: 'active' };
-            if (!target || (target.password && target.password !== cur && cur !== '123')) return alert("현재 비밀번호 불일치");
-            
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({ type: 'user', payload: { ...target, password: nw } })
-                });
-            }
-            alert("비밀번호가 변경되었습니다. 다시 로그인해주세요."); handleLogout();
-        }
-
-        function switchMainTab(tab) {
-            ['search', 'repair', 'defect', 'koelsa', 'users'].forEach(t => {
-                const el = document.getElementById(`sec-${t}-tab`);
-                if(el) el.classList.add('hidden');
-                const btn = document.getElementById(`nav-btn-${t}`);
-                if(btn) {
-                    if(t === 'koelsa') btn.className = "bg-purple-600 hover:bg-purple-500 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow transition";
-                    else btn.className = "bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-slate-700";
-                }
-            });
-            document.getElementById(`sec-${tab}-tab`).classList.remove('hidden');
-            document.getElementById(`nav-btn-${tab}`).className = tab==='koelsa'?"bg-purple-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow":"bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow";
-            if (tab === 'users') renderUserManagementTable();
-            if (tab === 'koelsa') searchKoelsaSites();
-        }
-
-        function openNewSiteModal() { document.getElementById('new-site-modal').classList.remove('hidden'); }
-        function closeNewSiteModal() { document.getElementById('new-site-modal').classList.add('hidden'); }
-
-        async function submitNewSite() {
-            let siteName = document.getElementById('ins-siteName').value.trim();
-            let elevatorNo = document.getElementById('ins-elevatorNo').value.trim();
-            if (!siteName || !elevatorNo) return alert("건물명(현장명)과 승강기번호는 필수 입력 항목입니다.");
-
-            let payload = {
-                id: Date.now(),
-                siteName: siteName,
-                elevatorNo: elevatorNo,
-                projectNo: document.getElementById('ins-projectNo').value.trim(),
-                maker: document.getElementById('ins-maker').value.trim(),
-                subCompany: document.getElementById('ins-subCompany').value.trim(),
-                phone: document.getElementById('ins-phone').value.trim(),
-                address: document.getElementById('ins-address').value.trim(),
-                installDate: document.getElementById('ins-installDate').value,
-                expireDate: document.getElementById('ins-expireDate').value,
-                manager: document.getElementById('ins-manager').value.trim(),
-                model: document.getElementById('ins-model').value.trim()
+            const payload = {
+                id: 'record_' + Date.now(),
+                type: workType,
+                siteName,
+                elevatorNo,
+                workDate,
+                author,
+                notes: content,
+                createdAt: new Date().toISOString()
             };
 
-            dbSites.push(payload);
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({ type: 'site', payload: payload })
-                });
+            await db.records.add(payload);
+
+            if (!GOOGLE_SCRIPT_API_URL.includes("여기에_구글_웹앱_URL을_입력하세요")) {
+                try {
+                    await fetch(GOOGLE_SCRIPT_API_URL, {
+                        method: "POST", mode: "no-cors",
+                        body: JSON.stringify({ type: 'riskReport', payload })
+                    });
+                } catch(e) { console.error(e); }
             }
-            alert("✅ 신규 현장이 등록되었습니다!");
-            closeNewSiteModal();
-            refreshAllViews();
+
+            alert("✅ 고장·하자 접수 내용이 저장되고 구글 시트로 전송되었습니다!");
+            document.getElementById('reg-content').value = '';
+            switchTab('list');
         }
 
-        let activePickerTarget = 'repair';
-        function openSitePickerModal(type) {
-            activePickerTarget = type;
-            document.getElementById('picker-search-kw').value = '';
-            renderPickerSiteList('');
-            document.getElementById('site-picker-modal').classList.remove('hidden');
-        }
-        function closeSitePickerModal() { document.getElementById('site-picker-modal').classList.add('hidden'); }
-        function filterPickerSites() { renderPickerSiteList(document.getElementById('picker-search-kw').value.toLowerCase().trim()); }
-        function renderPickerSiteList(kw) {
-            let filtered = dbSites.filter(s => !kw || (s.siteName && s.siteName.toLowerCase().includes(kw)) || (s.elevatorNo && s.elevatorNo.toLowerCase().includes(kw)));
-            let container = document.getElementById('picker-site-list');
-            container.innerHTML = filtered.length === 0 ? `<div class="text-center text-slate-500 py-4">검색된 현장이 없습니다.</div>` : '';
-            filtered.forEach(s => {
-                container.insertAdjacentHTML('beforeend', `
-                    <div onclick="selectSiteForForm('${s.siteName}', '${s.elevatorNo}')" class="bg-slate-800 hover:bg-purple-900/40 border border-slate-700 p-2.5 rounded-xl cursor-pointer flex justify-between items-center">
-                        <div>
-                            <div class="font-bold text-white text-xs">${s.siteName}</div>
-                            <div class="text-[10px] text-slate-400">${s.address || '-'}</div>
-                        </div>
-                        <span class="text-xs font-bold text-blue-400 bg-blue-950/60 border border-blue-900 px-2 py-1 rounded">${s.elevatorNo || '-'}</span>
+        async function renderIntegrationList() {
+            const container = document.getElementById('integration-list-container');
+            if (!container) return;
+            const keyword = document.getElementById('search-keyword').value.toLowerCase();
+            const dateFilter = document.getElementById('search-date-filter').value;
+
+            let records = await db.records.reverse().toArray();
+
+            let filtered = records.filter(r => {
+                let matchKeyword = !keyword || (r.siteName && r.siteName.toLowerCase().includes(keyword)) || (r.elevatorNo && r.elevatorNo.toLowerCase().includes(keyword));
+                let matchDate = !dateFilter || r.workDate === dateFilter;
+                return matchKeyword && matchDate;
+            });
+
+            container.innerHTML = filtered.map(r => `
+                <div class="bg-white p-4 rounded-xl border text-xs space-y-2 shadow-sm">
+                    <div class="font-bold text-slate-800 flex justify-between items-center border-b pb-1.5">
+                        <span class="text-blue-700 text-sm">${r.siteName} (${r.elevatorNo})</span>
+                        <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">${r.type}</span>
                     </div>
-                `);
-            });
-        }
-        function selectSiteForForm(siteName, elevatorNo) {
-            if (activePickerTarget === 'repair') {
-                document.getElementById('rep-site').value = siteName;
-                document.getElementById('rep-no').value = elevatorNo;
-            } else {
-                document.getElementById('def-site').value = siteName;
-                document.getElementById('def-no').value = elevatorNo;
-            }
-            closeSitePickerModal();
-        }
-
-        function getEngineers(prefix) {
-            let engs = [];
-            for(let i=1; i<=4; i++) {
-                let v = document.getElementById(`${prefix}-eng-${i}`).value;
-                if(v && !engs.includes(v)) engs.push(v);
-            }
-            return engs.join(', ');
-        }
-
-        async function getPhotosData(inputId) {
-            const input = document.getElementById(inputId);
-            if (!input || !input.files || input.files.length === 0) return '';
-            let files = Array.from(input.files).slice(0, 5);
-            let promises = files.map(file => {
-                return new Promise((resolve) => {
-                    let reader = new FileReader();
-                    reader.onload = (e) => {
-                        let img = new Image();
-                        img.onload = () => {
-                            let canvas = document.createElement('canvas');
-                            let ctx = canvas.getContext('2d');
-                            let MAX_WIDTH = 800, MAX_HEIGHT = 800;
-                            let width = img.width, height = img.height;
-                            if (width > height) {
-                                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                            } else {
-                                if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                            }
-                            canvas.width = width; canvas.height = height;
-                            ctx.drawImage(img, 0, 0, width, height);
-                            resolve(canvas.toDataURL('image/jpeg', 0.7));
-                        };
-                        img.src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                });
-            });
-            let base64Imgs = await Promise.all(promises);
-            return base64Imgs.join(' || ');
-        }
-
-        let currentReviewData = null;
-        async function prepareReviewModal(type) {
-            let siteName, elevatorNo, chargeType, receiptTime, arriveTime, rescueTime, returnTime, completeTime, partName, quantity, engineers, symptomOrContent, action, photosStr;
-            photosStr = await getPhotosData(type === 'repair' ? 'rep-photos' : 'def-photos');
-
-            if (type === 'repair') {
-                siteName = document.getElementById('rep-site').value.trim();
-                elevatorNo = document.getElementById('rep-no').value.trim();
-                chargeType = document.getElementById('rep-chargable').value;
-                receiptTime = document.getElementById('rep-receipt').value;
-                arriveTime = document.getElementById('rep-arrive').value;
-                rescueTime = document.getElementById('rep-rescue').value;
-                completeTime = document.getElementById('rep-complete').value;
-                partName = document.getElementById('rep-part').value.trim() || '-';
-                quantity = document.getElementById('rep-qty').value.trim() || '-';
-                engineers = getEngineers('rep');
-                symptomOrContent = document.getElementById('rep-symptom').value.trim();
-                action = document.getElementById('rep-action').value.trim();
-                if (!siteName || !elevatorNo || !action) return alert("필수 항목을 입력해주세요.");
-                currentReviewData = { type, payload: { id: Date.now(), siteName, elevatorNo, chargeType, receiptTime, arriveTime, rescueTime, completeTime, partName, quantity, engineers, symptom: symptomOrContent, action, photos: photosStr } };
-            } else {
-                siteName = document.getElementById('def-site').value.trim();
-                elevatorNo = document.getElementById('def-no').value.trim();
-                chargeType = document.getElementById('def-chargable').value;
-                receiptTime = document.getElementById('def-receipt').value;
-                returnTime = document.getElementById('def-return').value;
-                completeTime = document.getElementById('def-complete').value;
-                partName = document.getElementById('def-part').value.trim() || '-';
-                quantity = document.getElementById('def-qty').value.trim() || '-';
-                engineers = getEngineers('def');
-                symptomOrContent = document.getElementById('def-content').value.trim();
-                action = document.getElementById('def-action').value.trim();
-                if (!siteName || !elevatorNo || !action) return alert("필수 항목을 입력해주세요.");
-                currentReviewData = { type, payload: { id: Date.now(), siteName, elevatorNo, chargeType, receiptTime, returnTime, completeTime, partName, quantity, engineers, content: symptomOrContent, action, photos: photosStr } };
-            }
-
-            let photoCount = photosStr ? photosStr.split(' || ').length : 0;
-            let html = `
-                <div><b>구분:</b> <span class="text-blue-400 font-bold">${type==='repair'?'고장 수리':'하자 접수'}</span></div>
-                <div><b>현장명 / 호기:</b> ${siteName} (${elevatorNo})</div>
-                <div><b>접수일시:</b> ${receiptTime || '-'}</div>
-                ${type==='defect'?`<div><b>부품반납일시:</b> ${returnTime || '-'}</div>`:''}
-                <div><b>완료일시:</b> ${completeTime || '-'}</div>
-                <div><b>부품/수량:</b> ${partName} (${quantity}) / ${chargeType}</div>
-                <div><b>작업자:</b> ${engineers || '지정 안됨'}</div>
-                <div><b>내용:</b> ${symptomOrContent} / <b>조치:</b> ${action}</div>
-                <div><b>첨부 사진:</b> <span class="text-emerald-400 font-bold">${photoCount}장 첨부됨</span></div>
-            `;
-            document.getElementById('review-modal-content').innerHTML = html;
-            document.getElementById('review-modal').classList.remove('hidden');
-        }
-        function closeReviewModal() { document.getElementById('review-modal').classList.add('hidden'); currentReviewData = null; }
-
-        async function executeCloudSave() {
-            if (!currentReviewData) return;
-            if(currentReviewData.type === 'repair') dbRepairs.push(currentReviewData.payload);
-            else dbDefects.push(currentReviewData.payload);
-
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify(currentReviewData)
-                });
-            }
-            alert("✅ 저장되었습니다!");
-            closeReviewModal();
-            refreshAllViews();
-        }
-
-        function searchSites() {
-            const kw = document.getElementById('filter-site-name').value.toLowerCase().trim();
-            const metaKw = document.getElementById('filter-meta').value.toLowerCase().trim();
-
-            let filtered = dbSites.filter(s => {
-                let mKw = !kw || (s.siteName && s.siteName.toLowerCase().includes(kw)) || (s.elevatorNo && s.elevatorNo.toLowerCase().includes(kw));
-                let mMeta = !metaKw || (s.maker && s.maker.toLowerCase().includes(metaKw)) || (s.subCompany && s.subCompany.toLowerCase().includes(metaKw));
-                return mKw && mMeta;
-            });
-
-            const tbody = document.getElementById('elevator-table-tbody');
-            document.getElementById('elevator-total-count').textContent = `총 ${filtered.length}건`;
-            tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="10" class="text-center text-slate-500 py-6">조회된 현장이 없습니다.</td></tr>` : '';
-
-            filtered.forEach(s => {
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr class="hover:bg-slate-800">
-                        <td class="text-center font-bold text-blue-400">${s.elevatorNo || '-'}</td>
-                        <td class="text-center">${s.projectNo || '-'}</td>
-                        <td class="font-bold text-white"><a href="javascript:void(0)" onclick="openDetailModal(${s.id})" class="text-blue-400 hover:underline">${s.siteName || '-'}</a></td>
-                        <td class="text-center">${s.maker || '-'}</td>
-                        <td class="text-center">${s.subCompany || '-'}</td>
-                        <td>${s.address || '-'}</td>
-                        <td class="text-center">${s.installDate || '-'}</td>
-                        <td class="text-center text-rose-400 font-bold">${s.expireDate || '-'}</td>
-                        <td class="text-center">
-                            <div class="font-bold text-white">${s.manager || '미지정'}</div>
-                            <div class="text-[10px] text-blue-300">엔지니어: ${s.phone || '없음'}</div>
-                        </td>
-                        <td class="text-center"><button onclick="openDetailModal(${s.id})" class="border border-slate-700 px-2 py-1 rounded bg-slate-800 text-[11px] text-slate-200">상세/수정</button></td>
-                    </tr>
-                `);
-            });
-        }
-        function resetSiteSearch() {
-            document.getElementById('filter-site-name').value = '';
-            document.getElementById('filter-meta').value = '';
-            searchSites();
-        }
-
-        function searchKoelsaSites() {
-            const monthVal = document.getElementById('koelsa-expire-month').value;
-            let filtered = dbSites.filter(s => {
-                return !monthVal || (s.expireDate && s.expireDate.startsWith(monthVal));
-            });
-
-            const tbody = document.getElementById('koelsa-table-tbody');
-            document.getElementById('koelsa-total-count').textContent = `조회된 대상: ${filtered.length}건`;
-            tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="5" class="text-center text-slate-500 py-6">조회된 만료일 대상 현장이 없습니다.</td></tr>` : '';
-
-            filtered.forEach(s => {
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr class="hover:bg-slate-800">
-                        <td class="text-center"><input type="checkbox" class="koelsa-row-checkbox rounded" value="${s.elevatorNo}" checked></td>
-                        <td class="text-center font-bold text-blue-400">${s.elevatorNo || '-'}</td>
-                        <td class="font-bold text-white">${s.siteName || '-'}</td>
-                        <td class="text-center text-rose-400 font-bold">${s.expireDate || '-'}</td>
-                        <td class="text-center">
-                            <div class="flex gap-1 items-center justify-center">
-                                <input type="date" id="koelsa-single-${s.id}" class="border rounded p-1 text-xs" value="${s.expireDate || ''}">
-                                <button onclick="saveSingleExpire(${s.id})" class="bg-purple-600 text-white px-2.5 py-1 rounded text-xs font-bold shadow">개별저장</button>
-                            </div>
-                        </td>
-                    </tr>
-                `);
-            });
-        }
-        function toggleSelectAllKoelsa(src) { document.querySelectorAll('.koelsa-row-checkbox').forEach(cb => cb.checked = src.checked); }
-
-        async function saveSingleExpire(id) {
-            let newDate = document.getElementById(`koelsa-single-${id}`).value;
-            let target = dbSites.find(x => x.id === id);
-            if (!target || !newDate) return alert("만료일을 입력해주세요.");
-            target.expireDate = newDate;
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({ type: 'expireUpdate', updates: [{ elevatorNo: target.elevatorNo, expireDate: newDate }] })
-                });
-            }
-            alert("개별 만료일이 갱신되었습니다.");
-            refreshAllViews();
-        }
-
-        async function executeBatchExpireUpdate() {
-            let newDate = document.getElementById('koelsa-new-date').value;
-            if (!newDate) return alert("일괄 적용할 새로운 만료일자를 선택해주세요.");
-
-            let checkedBoxes = document.querySelectorAll('.koelsa-row-checkbox:checked');
-            if (checkedBoxes.length === 0) return alert("선택된 항목이 없습니다.");
-
-            let updates = [];
-            checkedBoxes.forEach(cb => {
-                let s = dbSites.find(x => x.elevatorNo === cb.value);
-                if(s) s.expireDate = newDate;
-                updates.push({ elevatorNo: cb.value, expireDate: newDate });
-            });
-
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({ type: 'expireUpdate', updates: updates })
-                });
-            }
-            alert(`✅ 총 ${updates.length}건의 검사만료일이 일괄 갱신되었습니다!`);
-            refreshAllViews();
-        }
-
-        async function openDetailModal(id) {
-            let s = dbSites.find(x => x.id === id);
-            if (!s) return;
-            document.getElementById('modal-content').innerHTML = `
-                <input type="hidden" id="edit-id" value="${s.id}">
-                <div class="grid grid-cols-2 gap-2 bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-xs">
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">건물명 (현장명)</label><input type="text" id="e-siteName" value="${s.siteName||''}" class="w-full border rounded p-1.5 font-bold"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">승강기번호 (호기)</label><input type="text" id="e-elevatorNo" value="${s.elevatorNo||''}" class="w-full border rounded p-1.5 text-blue-400 font-bold"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">프로젝트 넘버</label><input type="text" id="e-projectNo" value="${s.projectNo||''}" class="w-full border rounded p-1.5"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">제조사</label><input type="text" id="e-maker" value="${s.maker||''}" class="w-full border rounded p-1.5"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">계약 형태</label><input type="text" id="e-subCompany" value="${s.subCompany||''}" class="w-full border rounded p-1.5"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">엔지니어 연락처</label><input type="text" id="e-phone" value="${s.phone||''}" class="w-full border rounded p-1.5"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">설치일자</label><input type="date" id="e-installDate" value="${s.installDate||''}" class="w-full border rounded p-1.5"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">검사만료일</label><input type="date" id="e-expireDate" value="${s.expireDate||''}" class="w-full border rounded p-1.5 text-rose-400 font-bold"></div>
-                    <div class="col-span-2"><label class="block text-[10px] text-slate-400 font-bold mb-1">주소</label><input type="text" id="e-address" value="${s.address||''}" class="w-full border rounded p-1.5"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">현장 담당자</label><input type="text" id="e-manager" value="${s.manager||''}" class="w-full border rounded p-1.5"></div>
-                    <div><label class="block text-[10px] text-slate-400 font-bold mb-1">모델</label><input type="text" id="e-model" value="${s.model||''}" class="w-full border rounded p-1.5"></div>
+                    <div class="text-slate-600 whitespace-pre-wrap">${r.notes || '내용 없음'}</div>
+                    <div class="text-[11px] text-slate-400 flex justify-between pt-1 border-t">
+                        <span>접수자: ${r.author}</span>
+                        <span>접수일자: ${r.workDate}</span>
+                    </div>
                 </div>
-            `;
-            document.getElementById('modal-delete-btn').setAttribute('onclick', `deleteSite(${s.id})`);
-            document.getElementById('site-detail-modal').classList.remove('hidden');
+            `).join('') || '<div class="text-center text-xs text-slate-400 py-6">등록된 접수 이력이 없습니다.</div>';
         }
-        function closeModal() { document.getElementById('site-detail-modal').classList.add('hidden'); }
 
-        async function saveSiteEdits() {
-            let id = Number(document.getElementById('edit-id').value);
-            let target = dbSites.find(x => x.id === id);
-            if(target) {
-                target.siteName = document.getElementById('e-siteName').value;
-                target.elevatorNo = document.getElementById('e-elevatorNo').value;
-                target.projectNo = document.getElementById('e-projectNo').value;
-                target.maker = document.getElementById('e-maker').value;
-                target.subCompany = document.getElementById('e-subCompany').value;
-                target.phone = document.getElementById('e-phone').value;
-                target.installDate = document.getElementById('e-installDate').value;
-                target.expireDate = document.getElementById('e-expireDate').value;
-                target.address = document.getElementById('e-address').value;
-                target.manager = document.getElementById('e-manager').value;
-                target.model = document.getElementById('e-model').value;
+        async function renderEmergencyContacts() {
+            const container = document.getElementById('contacts-list');
+            if (!container) return;
+            let contacts = await db.contacts.toArray();
+            container.innerHTML = contacts.map(c => `
+                <div class="p-3 border rounded-xl bg-slate-50 text-xs font-bold flex justify-between items-center">
+                    <div>${c.name} (${c.dept || '소속없음'}) - <span class="text-blue-600">${c.phone}</span></div>
+                    <div class="text-slate-500 font-normal">${c.role || ''}</div>
+                </div>
+            `).join('') || '<div class="text-center text-xs text-slate-400 py-4">등록된 비상연락망이 없습니다.</div>';
+        }
+
+        async function addEmergencyContact() {
+            const name = document.getElementById('contact-name').value;
+            const dept = document.getElementById('contact-dept').value;
+            const phone = document.getElementById('contact-phone').value;
+            const role = document.getElementById('contact-role').value;
+            if (name && phone) { 
+                await db.contacts.add({ name, dept, phone, role }); 
+                document.getElementById('contact-name').value = '';
+                document.getElementById('contact-dept').value = '';
+                document.getElementById('contact-phone').value = '';
+                document.getElementById('contact-role').value = '';
+                renderEmergencyContacts(); 
+                alert("비상연락망이 등록되었습니다."); 
+            } else {
+                alert("이름과 전화번호를 입력해주세요.");
             }
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({ type: 'site', payload: target })
-                });
-            }
-            alert("수정되었습니다.");
-            closeModal();
-            refreshAllViews();
-        }
-
-        async function deleteSite(id) {
-            if (confirm("정말 삭제하시겠습니까?")) {
-                dbSites = dbSites.filter(x => x.id !== id);
-                if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                    await fetch(GOOGLE_SCRIPT_API_URL, {
-                        method: "POST", mode: "no-cors",
-                        body: JSON.stringify({ type: 'deleteSite', targetTable: 'sites', id: id })
-                    });
-                }
-                alert("삭제되었습니다.");
-                closeModal();
-                refreshAllViews();
-            }
-        }
-
-        function openUploadModal() { document.getElementById('upload-modal').classList.remove('hidden'); }
-        function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); }
-        function downloadExcelTemplate() {
-            const headers = ["siteName", "owner", "phone", "buildingFloors", "address", "elevatorNo", "projectNo", "maker", "subCompany", "installLocation", "kind", "maintCompany", "model", "weight", "persons", "runFloors", "speed", "runRange", "installDate", "expireDate", "manager"];
-            const sample = ["에스스퀘어", "정수연", "010-0000-0000", "지상2층", "서울 강남구", "0151107", "P-1001", "현대", "자체", "1-1", "승객용", "현대", "WBSS", "900kg", "12명", "4층", "1m/s", "B2-2", "2021-12-06", "2026-12-05", "홍길동"];
-            let csv = "\uFEFF" + [headers.join(","), sample.join(",")].join("\n");
-            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "현장등록_표준양식.csv"; a.click();
-        }
-        async function handleExcelUpload() {
-            let file = document.getElementById('excel-file-input').files[0];
-            if (!file) return alert("파일을 선택하세요.");
-            let reader = new FileReader();
-            reader.onload = async (e) => {
-                let wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-                let rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                for (let r of rows) {
-                    let newRow = { id: Date.now() + Math.random(), ...r };
-                    dbSites.push(newRow);
-                    if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                        await fetch(GOOGLE_SCRIPT_API_URL, {
-                            method: "POST", mode: "no-cors",
-                            body: JSON.stringify({ type: 'site', payload: r })
-                        });
-                    }
-                }
-                alert("엑셀 업로드 완료!");
-                closeUploadModal();
-                refreshAllViews();
-            };
-            reader.readAsArrayBuffer(file);
-        }
-        function downloadExpireTemplate() {
-            let csv = "\uFEFFelevatorNo,expireDate\n0151107,2026-12-31";
-            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "만료일갱신양식.csv"; a.click();
-        }
-        async function exportFilteredSitesToExcel() {
-            if (dbSites.length === 0) return alert("데이터가 없습니다.");
-            let ws = XLSX.utils.json_to_sheet(dbSites);
-            let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "현장목록");
-            XLSX.writeFile(wb, "승강기현장목록.xlsx");
-        }
-
-        function searchRepairLogs() {
-            const start = document.getElementById('rep-search-start').value;
-            const end = document.getElementById('rep-search-end').value;
-            const siteKw = document.getElementById('rep-search-site').value.toLowerCase().trim();
-            const engKw = document.getElementById('rep-search-engineer').value.toLowerCase().trim();
-
-            let filtered = dbRepairs.filter(r => {
-                let mStart = !start || (r.receiptTime && r.receiptTime >= start);
-                let mEnd = !end || (r.receiptTime && r.receiptTime <= end + 'T23:59');
-                let mSite = !siteKw || (r.siteName && r.siteName.toLowerCase().includes(siteKw)) || (r.elevatorNo && r.elevatorNo.toLowerCase().includes(siteKw));
-                let mEng = !engKw || (r.engineers && r.engineers.toLowerCase().includes(engKw));
-                return mStart && mEnd && mSite && mEng;
-            });
-
-            const tbody = document.getElementById('repair-table-tbody');
-            tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="8" class="text-center text-slate-500 py-6">이력이 없습니다.</td></tr>` : '';
-            filtered.reverse().forEach(r => {
-                let photoCnt = r.photos ? r.photos.split(' || ').length : 0;
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr class="hover:bg-slate-800">
-                        <td class="text-center"><input type="checkbox" class="repair-row-checkbox rounded" value="${r.id}" checked></td>
-                        <td class="text-center text-[10px]">접수: ${r.receiptTime||'-'}<br>완료: ${r.completeTime||'-'}</td>
-                        <td class="text-center font-bold text-blue-400">${r.elevatorNo||'-'}</td>
-                        <td class="font-bold text-white">${r.siteName||'-'}</td>
-                        <td><b>[증상]</b> ${r.symptom||'-'}<br><b>[조치]</b> ${r.action||'-'}<br><span class="text-purple-400 text-[10px]">📸 사진 ${photoCnt}장</span></td>
-                        <td>${r.partName||'-'} (${r.quantity||'-'}) / ${r.chargeType||'무상'}</td>
-                        <td class="text-center">${r.engineers||'-'}</td>
-                        <td class="text-center"><button onclick="deleteLog('repairs', ${r.id})" class="text-rose-400"><i class="fa-solid fa-trash"></i></button></td>
-                    </tr>
-                `);
-            });
-        }
-        function resetRepairSearch() {
-            document.getElementById('rep-search-start').value = '';
-            document.getElementById('rep-search-end').value = '';
-            document.getElementById('rep-search-site').value = '';
-            document.getElementById('rep-search-engineer').value = '';
-            searchRepairLogs();
-        }
-        function toggleSelectAllRepairs(src) { document.querySelectorAll('.repair-row-checkbox').forEach(cb => cb.checked = src.checked); }
-
-        function searchDefectLogs() {
-            const start = document.getElementById('def-search-start').value;
-            const end = document.getElementById('def-search-end').value;
-            const siteKw = document.getElementById('def-search-site').value.toLowerCase().trim();
-            const engKw = document.getElementById('def-search-engineer').value.toLowerCase().trim();
-
-            let filtered = dbDefects.filter(d => {
-                let mStart = !start || (d.receiptTime && d.receiptTime >= start);
-                let mEnd = !end || (d.receiptTime && d.receiptTime <= end + 'T23:59');
-                let mSite = !siteKw || (d.siteName && d.siteName.toLowerCase().includes(siteKw)) || (d.elevatorNo && d.elevatorNo.toLowerCase().includes(siteKw));
-                let mEng = !engKw || (d.engineers && d.engineers.toLowerCase().includes(engKw));
-                return mStart && mEnd && mSite && mEng;
-            });
-
-            const tbody = document.getElementById('defect-table-tbody');
-            tbody.innerHTML = filtered.length === 0 ? `<tr><td colspan="8" class="text-center text-slate-500 py-6">이력이 없습니다.</td></tr>` : '';
-            filtered.reverse().forEach(d => {
-                let photoCnt = d.photos ? d.photos.split(' || ').length : 0;
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr class="hover:bg-slate-800">
-                        <td class="text-center"><input type="checkbox" class="defect-row-checkbox rounded" value="${d.id}" checked></td>
-                        <td class="text-center text-[10px]">접수: ${d.receiptTime||'-'}<br>반납: ${d.returnTime||'-'}<br>완료: ${d.completeTime||'-'}</td>
-                        <td class="text-center font-bold text-amber-400">${d.elevatorNo||'-'}</td>
-                        <td class="font-bold text-white">${d.siteName||'-'}</td>
-                        <td><b>[내용]</b> ${d.content||'-'}<br><b>[조치]</b> ${d.action||'-'}<br><span class="text-amber-400 text-[10px]">📸 사진 ${photoCnt}장</span></td>
-                        <td>${d.partName||'-'} (${d.quantity||'-'}) / ${d.chargeType||'하자무상'}</td>
-                        <td class="text-center">${d.engineers||'-'}</td>
-                        <td class="text-center"><button onclick="deleteLog('defects', ${d.id})" class="text-rose-400"><i class="fa-solid fa-trash"></i></button></td>
-                    </tr>
-                `);
-            });
-        }
-        function toggleSelectAllDefects(src) { document.querySelectorAll('.defect-row-checkbox').forEach(cb => cb.checked = src.checked); }
-
-        async function deleteLog(tableName, id) {
-            if (confirm("정말 삭제하시겠습니까?")) {
-                if(tableName === 'repairs') dbRepairs = dbRepairs.filter(x => x.id !== id);
-                else dbDefects = dbDefects.filter(x => x.id !== id);
-                if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                    await fetch(GOOGLE_SCRIPT_API_URL, {
-                        method: "POST", mode: "no-cors",
-                        body: JSON.stringify({ type: 'deleteLog', targetTable: tableName, id: id })
-                    });
-                }
-                alert("삭제되었습니다.");
-                refreshAllViews();
-            }
-        }
-
-        async function registerNewUser() {
-            let name = document.getElementById('new-user-name').value.trim();
-            let phone = document.getElementById('new-user-phone').value.trim();
-            let username = document.getElementById('new-user-id').value.trim();
-            let password = document.getElementById('new-user-pw').value.trim();
-            
-            if (!name || !username || !password) return alert("필수 항목을 입력해주세요.");
-            
-            let newUser = { id: Date.now(), name: name, phone: phone, username: username, password: password, role: 'user', status: 'active' };
-            dbUsers.push(newUser);
-            
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({ type: 'user', payload: newUser })
-                });
-            }
-            
-            alert("직원이 등록되었습니다.");
-            document.getElementById('new-user-name').value = '';
-            document.getElementById('new-user-phone').value = '';
-            document.getElementById('new-user-id').value = '';
-            document.getElementById('new-user-pw').value = '';
-            
-            refreshAllViews();
-        }
-
-        function openUserEditModal(id) {
-            let u = dbUsers.find(x => x.id === id);
-            if (!u) return;
-            document.getElementById('edit-user-id').value = u.id;
-            document.getElementById('edit-user-name').value = u.name;
-            document.getElementById('edit-user-phone').value = u.phone || '';
-            document.getElementById('edit-user-pw').value = '';
-            document.getElementById('user-edit-modal').classList.remove('hidden');
-        }
-        function closeUserEditModal() { document.getElementById('user-edit-modal').classList.add('hidden'); }
-
-        async function saveUserEdits() {
-            let id = Number(document.getElementById('edit-user-id').value);
-            let u = dbUsers.find(x => x.id === id);
-            if (!u) return;
-            u.name = document.getElementById('edit-user-name').value.trim();
-            u.phone = document.getElementById('edit-user-phone').value.trim();
-            let pw = document.getElementById('edit-user-pw').value.trim();
-            if(pw) u.password = pw;
-
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({ type: 'user', payload: u })
-                });
-            }
-            alert("직원 정보가 수정되었습니다.");
-            closeUserEditModal();
-            refreshAllViews();
-        }
-
-        async function toggleUserStatus(id) {
-            let u = dbUsers.find(x => x.id === id);
-            if (!u) return;
-            u.status = u.status === 'resigned' ? 'active' : 'resigned';
-            if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                await fetch(GOOGLE_SCRIPT_API_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({ type: 'user', payload: u })
-                });
-            }
-            alert(`상태가 변경되었습니다 (${u.status === 'resigned' ? '퇴사' : '재직'}).`);
-            refreshAllViews();
-        }
-
-        async function deleteUser(id) {
-            if (confirm("정말 이 직원 계정을 삭제하시겠습니까?")) {
-                dbUsers = dbUsers.filter(x => x.id !== id);
-                if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                    await fetch(GOOGLE_SCRIPT_API_URL, {
-                        method: "POST", mode: "no-cors",
-                        body: JSON.stringify({ type: 'deleteSite', targetTable: 'users', id: id })
-                    });
-                }
-                alert("삭제되었습니다.");
-                refreshAllViews();
-            }
-        }
-
-        function downloadUserExcelTemplate() {
-            let csv = "\uFEFFname,phone,username,password\n김엔지니어,010-1234-5678,eng1@fmlg.co.kr,123";
-            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "직원등록_표준양식.csv"; a.click();
-        }
-
-        async function handleUserExcelUpload() {
-            let file = document.getElementById('user-excel-file').files[0];
-            if (!file) return alert("파일을 선택하세요.");
-            let reader = new FileReader();
-            reader.onload = async (e) => {
-                let wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-                let rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                for (let r of rows) {
-                    let u = { id: Date.now() + Math.random(), name: r.name||r['성명'], phone: r.phone||r['연락처'], username: r.username||r['아이디'], password: String(r.password||r['비밀번호']), role: 'user', status: 'active' };
-                    dbUsers.push(u);
-                    if (!GOOGLE_SCRIPT_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
-                        await fetch(GOOGLE_SCRIPT_API_URL, {
-                            method: "POST", mode: "no-cors",
-                            body: JSON.stringify({ type: 'user', payload: u })
-                        });
-                    }
-                }
-                alert("직원 엑셀 일괄 등록 완료!");
-                refreshAllViews();
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function renderUserManagementTable() {
-            let tbody = document.getElementById('user-table-tbody');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-            dbUsers.forEach(u => {
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr class="hover:bg-slate-800">
-                        <td class="font-bold text-white">${u.name}</td>
-                        <td>${u.phone || '-'}</td>
-                        <td>${u.username}</td>
-                        <td><span class="px-2 py-1 rounded text-[10px] bg-blue-950 text-blue-300 font-bold">${u.role}</span></td>
-                        <td><span class="px-2 py-1 rounded text-[10px] ${u.status==='resigned'?'bg-rose-950 text-rose-300':'bg-emerald-950 text-emerald-300'} font-bold">${u.status==='resigned'?'퇴사':'재직'}</span></td>
-                        <td class="text-center space-x-1">
-                            <button onclick="openUserEditModal(${u.id})" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2 py-1 rounded text-[10px]">수정</button>
-                            <button onclick="toggleUserStatus(${u.id})" class="bg-amber-950/60 hover:bg-amber-900 text-amber-300 border border-amber-900 px-2 py-1 rounded text-[10px]">${u.status==='resigned'?'복직':'퇴사'}</button>
-                            <button onclick="deleteUser(${u.id})" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-900 px-2 py-1 rounded text-[10px]">삭제</button>
-                        </td>
-                    </tr>
-                `);
-            });
         }
     </script>
 </body>

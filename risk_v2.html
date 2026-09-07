@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>위험성 평가 & TBM 스마트 앱 - 에프엠엘지엘리베이터㈜</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        .tab-btn.active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
+        canvas.sig-pad { border: 1px dashed #9ca3af; background-color: #ffffff; border-radius: 0.375rem; touch-action: none; }
+        .pdf-page { width: 210mm; min-height: 297mm; padding: 15mm; margin: 0 auto; background: #ffffff; box-sizing: border-box; color: #1e293b; page-break-after: always; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 12px; }
+        .pdf-table th, .pdf-table td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center; font-size: 11px; word-break: break-all; }
+        .pdf-table th { background-color: #f1f5f9; color: #0f172a; font-weight: 700; }
+    </style>
+</head>
+<body class="pb-28">
+
+    <script>
+        // 여기에 구글 앱스 스크립트 웹 앱 URL을 입력해주세요.
+        const GOOGLE_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbwVOB_nh6A3SySPKjrq_i07MAWmeQyByiYOucVEr3S3FexSHd4GNk2GVjiE8MgpaHil/exec";
+    </script>
+
+    <!-- Auth & Login Modal -->
+    <div id="auth-modal" class="fixed inset-0 bg-slate-900/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5 border border-slate-100">
+            <div class="text-center space-y-1">
+                <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl font-bold mx-auto shadow-md">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 class="text-base font-bold text-slate-800">에프엠엘지엘리베이터㈜</h2>
+                <p class="text-xs text-slate-500">임직원 전용 위험성 평가 & TBM 시스템</p>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">아이디 (이메일)</label>
+                    <input type="text" id="login-id" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50" value="admin@fmlg.co.kr">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">비밀번호</label>
+                    <input type="password" id="login-pw" class="w-full text-xs border rounded-lg p-2.5 bg-slate-50" value="123">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-xl shadow-md">로그인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 보고서 미리보기 모달 -->
+    <div id="report-preview-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-6 space-y-4 border max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="preview-modal-title" class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-file-lines text-blue-600"></i> 보고서 미리보기
+                </h3>
+                <button onclick="closeReportPreviewModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="report-preview-content" class="space-y-4 text-xs bg-slate-50 p-4 rounded-xl border"></div>
+            <div class="flex justify-end pt-2 border-t">
+                <button onclick="closeReportPreviewModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div>
+                <h1 class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-blue-400"></i> 에프엠엘지엘리베이터㈜
+                </h1>
+                <p class="text-xs text-slate-300">위험성 평가 & TBM 스마트 통합 시스템</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="switchTab('profile')" class="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-user text-blue-400"></i> <span id="user-display-name" class="font-medium">로그인 필요</span>
+                </button>
+                <button onclick="handleLogout()" title="로그아웃" class="bg-rose-900/60 text-rose-200 text-xs p-1.5 rounded-lg border border-rose-700/50">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </div>
+
+        <nav class="flex bg-slate-800 text-slate-300 text-xs border-t border-slate-700 overflow-x-auto">
+            <button onclick="switchTab('tbm')" id="tab-tbm" class="tab-btn active flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-users-gear block text-sm mb-0.5"></i> 1. TBM</button>
+            <button onclick="switchTab('kras')" id="tab-kras" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-clipboard-check block text-sm mb-0.5"></i> 2. 위험성</button>
+            <button onclick="switchTab('search')" id="tab-search" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-magnifying-glass block text-sm mb-0.5"></i> 3. 이력조회</button>
+            <button onclick="switchTab('contacts')" id="tab-contacts" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-address-book block text-sm mb-0.5 text-emerald-400"></i> 4. 비상연락망</button>
+            <button onclick="switchTab('profile')" id="tab-profile" class="tab-btn flex-1 py-2 text-center min-w-[50px] shrink-0"><i class="fa-solid fa-id-card block text-sm mb-0.5"></i> 5. 내정보</button>
+        </nav>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-4 space-y-4">
+
+        <!-- TAB 1: TBM -->
+        <section id="sec-tbm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-building-user text-blue-600"></i> TBM 현장 정보</h2>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div class="col-span-2"><label class="block text-slate-500 mb-1">현장명</label><input type="text" id="tbm-site-name" value="에스스퀘어" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                            <div><label class="block text-slate-500 mb-1">작업일자</label><input type="date" id="tbm-work-date" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                            <div><label class="block text-slate-500 mb-1">TBM 작업시간</label><input type="time" id="tbm-time" value="08:00" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                            <div>
+                                <label class="block text-slate-500 mb-1 font-bold text-blue-600">공종구분 선택</label>
+                                <select id="tbm-process-name" class="w-full border rounded p-2 bg-blue-50 font-bold text-blue-900">
+                                    <option value="승강기유지관리/정기점검">승강기유지관리/정기점검</option>
+                                    <option value="승강기법정검사">승강기법정검사</option>
+                                    <option value="승강기고장수리">승강기고장수리</option>
+                                    <option value="승강기부품교체">승강기부품교체</option>
+                                    <option value="승강기공사">승강기공사</option>
+                                </select>
+                            </div>
+                            <div><label class="block text-slate-500 mb-1">TBM 리더</label><input type="text" id="tbm-leader" value="홍길동 (부장)" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-list-check text-blue-600"></i> TBM 필수 점검 항목</h2>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div>[✔] 근로자 건강상태 확인 (음주·피로·혈압)</div>
+                            <div>[✔] 개인보호구 착용 점검 (안전모·절연장갑·안전대)</div>
+                            <div>[✔] 작업구역 출입통제 및 바리케이드 설치</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-camera text-blue-600"></i> TBM 현장 사진 등록</h2>
+                        <input type="file" id="tbm-photo-input" accept="image/*" capture="environment" onchange="previewTbmPhoto(this)" class="text-xs text-slate-500">
+                        <div id="tbm-photo-preview" class="mt-2 hidden"><img id="tbm-photo-img" src="" class="h-32 rounded-lg border object-cover"></div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-pen-to-square text-amber-500"></i> 특이사항</h2>
+                        <textarea id="tbm-notes" placeholder="특이사항 기재" class="w-full text-xs border rounded p-2.5 bg-slate-50 h-20"></textarea>
+                    </div>
+                </div>
+
+                <div class="space-y-4 flex flex-col justify-between">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-users text-blue-600"></i> 참석 근로자 및 서명</h2>
+                            <button onclick="addWorkerCard()" class="bg-blue-50 text-blue-600 text-xs px-2.5 py-1 rounded-md font-bold">+ 근로자 추가</button>
+                        </div>
+                        <div id="workers-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-1"></div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <button onclick="saveTbmDataCloud()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-cloud-arrow-up text-amber-400"></i> TBM 저장 및 구글시트 전송</button>
+                        <button onclick="openTbmPreviewModal()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-eye"></i> TBM 보고서 미리보기</button>
+                        <button onclick="generateTbmReportPDF()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-file-pdf"></i> TBM 보고서 PDF 출력/다운로드</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: KRAS 위험성 평가 -->
+        <section id="sec-kras" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-building-user text-blue-600"></i> 위험성평가 현장 정보 등록</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div><label class="block text-slate-500 mb-1">현장명</label><input type="text" id="kras-site-name" value="에스스퀘어" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                    <div><label class="block text-slate-500 mb-1">평가일자</label><input type="date" id="kras-work-date" class="w-full border rounded p-2 bg-slate-50 font-medium"></div>
+                    <div>
+                        <label class="block text-slate-500 mb-1 font-bold text-blue-600">대분류 선택</label>
+                        <select id="kras-main-category" onchange="renderRiskCards()" class="w-full border rounded p-2 bg-blue-50 font-bold text-blue-900">
+                            <option value="승강기점검">승강기점검</option>
+                            <option value="승강기고장수리">승강기고장수리</option>
+                            <option value="승강기부품교체">승강기부품교체</option>
+                            <option value="승강기공사">승강기공사</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
+                    <div class="space-y-1">
+                        <label class="block text-slate-700 font-bold">평가담당자 성명 및 서명</label>
+                        <input type="text" id="kras-evaluator" value="홍길동 (부장)" class="w-full border rounded p-1.5 bg-slate-50 mb-1 text-xs font-bold">
+                        <div class="flex justify-between items-center text-[10px] text-slate-400">
+                            <span>서명 란</span>
+                            <button onclick="krasEvaluatorSigPad.clear()" class="text-rose-500 font-bold">서명 지우기</button>
+                        </div>
+                        <canvas id="kras-eval-sig-canvas" class="sig-pad w-full h-16"></canvas>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center">
+                            <label class="block text-slate-700 font-bold">참석 근로자 서명 (다중)</label>
+                            <button onclick="addKrasWorkerInput()" class="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 rounded font-bold">+ 근로자 추가</button>
+                        </div>
+                        <div id="kras-workers-sig-container" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> KRAS 3x3 위험성평가 항목</h2>
+                <button onclick="addAssessmentCard()" class="bg-blue-600 text-white text-xs px-3 py-2 rounded-lg font-bold shadow-sm">+ 평가 항목 추가</button>
+            </div>
+
+            <div id="risk-card-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+            <div class="bg-white p-4 rounded-xl border space-y-2 shadow-sm">
+                <button onclick="saveKrasDataCloud()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-cloud-arrow-up text-amber-400"></i> 위험성평가 저장 및 구글시트 전송</button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="openKrasPreviewModal()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-eye"></i> 미리보기</button>
+                    <button onclick="generateKrasReportPDF()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-xs shadow"><i class="fa-solid fa-file-pdf"></i> PDF 출력/다운</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: 이력 조회 -->
+        <section id="sec-search" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h2 class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i class="fa-solid fa-magnifying-glass text-blue-600"></i> TBM 및 위험성 평가 이력 검색</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <input type="date" id="search-date" oninput="searchHistoryRecords()" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="search-site" oninput="searchHistoryRecords()" placeholder="현장명 검색" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="search-author" oninput="searchHistoryRecords()" placeholder="작성자 검색" class="border rounded-lg p-2 bg-slate-50">
+                </div>
+                <button onclick="exportHistoryToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-sm">📊 이력 전체 엑셀 다운로드</button>
+            </div>
+            <div id="search-results-list" class="space-y-3"></div>
+        </section>
+
+        <!-- TAB 4: 비상연락망 -->
+        <section id="sec-contacts" class="space-y-4 hidden">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5 text-emerald-600 border-b pb-2">
+                    <i class="fa-solid fa-address-book"></i> 임직원 및 협력사 비상연락망 관리
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                    <input type="text" id="contact-name" placeholder="이름" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-dept" placeholder="소속/부서" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-phone" placeholder="전화번호" class="border rounded-lg p-2 bg-slate-50">
+                    <input type="text" id="contact-role" placeholder="직급/역할" class="border rounded-lg p-2 bg-slate-50">
+                </div>
+                <button onclick="addEmergencyContact()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg shadow">비상연락망 등록</button>
+            </div>
+            <div class="bg-white p-4 rounded-xl border space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-list text-slate-700"></i> 비상연락망 목록</h3>
+                    <input type="text" id="contact-search" oninput="renderEmergencyContacts()" placeholder="이름/부서 검색" class="border rounded px-2 py-1 text-xs bg-slate-50 w-48">
+                </div>
+                <div id="contacts-list" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- TAB 5: 내 정보 -->
+        <section id="sec-profile" class="space-y-4 hidden">
+            <div class="bg-white p-5 rounded-2xl border space-y-4 shadow-sm max-w-lg mx-auto">
+                <div class="text-center space-y-1 border-b pb-4">
+                    <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto shadow">
+                        <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                    <h2 class="font-bold text-slate-800 text-base pt-2" id="profile-name">홍길동</h2>
+                    <p class="text-xs text-slate-500" id="profile-dept">에프엠엘지엘리베이터㈜ / 안전관리부</p>
+                </div>
+                <div class="pt-2 border-t">
+                    <button onclick="handleLogout()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold py-3 rounded-xl">로그아웃</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 숨김 PDF 출력 레이아웃 -->
+    <div style="position: fixed; top: -9999px; left: -9999px;">
+        <div id="printable-tbm-pdf" class="p-8 bg-white text-slate-900 text-xs space-y-4 font-sans" style="width: 210mm;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px;">
+                <div>
+                    <h1 class="text-lg font-bold">TBM 현장 점검 보고서</h1>
+                    <p class="text-[11px] text-slate-500 mt-0.5">에프엠엘지엘리베이터㈜ 안전관리팀</p>
+                </div>
+            </div>
+            <table class="w-full border-collapse border border-slate-400 text-center text-xs">
+                <tr class="bg-slate-100 font-bold">
+                    <td class="border border-slate-400 p-1.5 w-1/6">현장명</td>
+                    <td id="pdf-tbm-site" class="border border-slate-400 p-1.5 w-2/6"></td>
+                    <td class="border border-slate-400 p-1.5 w-1/6">작업일자</td>
+                    <td id="pdf-tbm-date" class="border border-slate-400 p-1.5 w-2/6"></td>
+                </tr>
+                <tr>
+                    <td class="border border-slate-400 p-1.5 font-bold bg-slate-50">공종구분</td>
+                    <td id="pdf-tbm-process" class="border border-slate-400 p-1.5"></td>
+                    <td class="border border-slate-400 p-1.5 font-bold bg-slate-50">TBM 리더</td>
+                    <td id="pdf-tbm-leader" class="border border-slate-400 p-1.5"></td>
+                </tr>
+            </table>
+            <div>
+                <div class="font-bold mb-1">■ TBM 필수 점검 항목</div>
+                <div class="p-2 border border-slate-300 bg-slate-50 text-xs space-y-1">
+                    <div>[✔] 근로자 건강상태 확인 (음주·피로·혈압)</div>
+                    <div>[✔] 개인보호구 착용 점검 (안전모·절연장갑·안전대)</div>
+                    <div>[✔] 작업구역 출입통제 및 바리케이드 설치</div>
+                </div>
+            </div>
+            <div>
+                <div class="font-bold mb-1">■ 특이사항</div>
+                <div id="pdf-tbm-notes" class="p-2 border border-slate-300 bg-slate-50 text-xs min-h-[30px]"></div>
+            </div>
+            <div id="pdf-tbm-photo-container" class="hidden">
+                <div class="font-bold mb-1">■ TBM 현장 사진</div>
+                <img id="pdf-tbm-photo-img" src="" style="max-height: 150px; border-radius: 6px; border: 1px solid #cbd5e1; display: block;">
+            </div>
+            <div>
+                <div class="font-bold mb-1">■ 참석 근로자 및 서명</div>
+                <div id="pdf-tbm-workers" class="flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+
+        <div id="printable-kras-pdf" class="p-8 bg-white text-slate-900 text-xs space-y-3 font-sans" style="width: 210mm;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 6px;">
+                <div>
+                    <h1 class="text-lg font-bold">승강기 안전관리 위험성평가표</h1>
+                    <p class="text-[11px] text-slate-500 mt-0.5">에프엠엘지엘리베이터㈜ 안전관리팀</p>
+                </div>
+            </div>
+            <table class="w-full border-collapse border border-slate-400 text-center text-xs">
+                <thead>
+                    <tr class="bg-slate-100 font-bold">
+                        <th class="border border-slate-400 p-1.5">공정명</th>
+                        <th class="border border-slate-400 p-1.5">세부작업명</th>
+                        <th class="border border-slate-400 p-1.5">유해·위험요인</th>
+                        <th class="border border-slate-400 p-1.5">개선대책</th>
+                    </tr>
+                </thead>
+                <tbody id="pdf-kras-rows"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const db = new Dexie('ElevatorRiskAppDB_v53');
+        db.version(1).stores({
+            items: '++id, category, processName, step, hazard, likelihood, severity, actionPlan, afterLikelihood, afterSeverity',
+            workers: '++id, name',
+            reports: '++id, type, siteName, workDate, tbmTime, processName, tbmLeader, author, workersList, notes, riskSummary, photo, createdAt',
+            contacts: '++id, name, dept, phone, role'
+        });
+
+        let tbmPhotoData = null;
+        let signaturePadsInstances = {};
+        let krasEvaluatorSigPad = null;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('tbm-work-date').value = today;
+            document.getElementById('kras-work-date').value = today;
+
+            if (await db.workers.count() === 0) {
+                await db.workers.bulkAdd([{ name: '홍길동 (부장)' }, { name: '김철수 (과장)' }]);
+            }
+            if (await db.items.count() === 0) {
+                await db.items.add({
+                    category: "승강기점검",
+                    processName: "기계실 점검",
+                    step: "제어반 점검",
+                    hazard: "1. 제어반 점검 시 쇼트 및 감전 위험",
+                    likelihood: 1, severity: 3,
+                    actionPlan: "1) 절연장갑 및 안전화 착용\n2) 주전원 차단",
+                    afterLikelihood: 1, afterSeverity: 2
+                });
+            }
+
+            renderWorkers();
+            renderKrasWorkersInputs();
+            renderRiskCards();
+            renderEmergencyContacts();
+        });
+
+        function switchTab(tab) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`sec-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            if (tab === 'kras') setTimeout(initKrasSignatures, 100);
+            if (tab === 'search') searchHistoryRecords();
+            if (tab === 'contacts') renderEmergencyContacts();
+        }
+
+        function handleLogin() { document.getElementById('auth-modal').classList.add('hidden'); }
+        function handleLogout() { if (confirm("로그아웃하시겠습니까?")) document.getElementById('auth-modal').classList.remove('hidden'); }
+
+        async function renderWorkers() {
+            const container = document.getElementById('workers-container');
+            if (!container) return;
+            let workers = await db.workers.toArray();
+            container.innerHTML = '';
+            signaturePadsInstances = {};
+
+            workers.forEach(w => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="p-2 border rounded bg-slate-50 text-xs space-y-1 relative">
+                        <button onclick="deleteWorkerCard(${w.id})" class="absolute top-1 right-2 text-rose-500 font-bold text-[10px]">삭제</button>
+                        <div class="font-bold text-slate-800">${w.name}</div>
+                        <canvas id="sig-${w.id}" class="sig-pad w-full h-16"></canvas>
+                    </div>
+                `);
+            });
+
+            setTimeout(() => {
+                workers.forEach(w => {
+                    let canvas = document.getElementById(`sig-${w.id}`);
+                    if (canvas) {
+                        canvas.width = canvas.offsetWidth;
+                        canvas.height = canvas.offsetHeight;
+                        signaturePadsInstances[w.id] = new SignaturePad(canvas);
+                    }
+                });
+            }, 100);
+        }
+
+        async function addWorkerCard() {
+            let name = prompt("참석자 성명(직급):");
+            if (name) { await db.workers.add({ name }); renderWorkers(); }
+        }
+
+        async function deleteWorkerCard(id) {
+            await db.workers.delete(id);
+            renderWorkers();
+        }
+
+        function renderKrasWorkersInputs() {
+            const container = document.getElementById('kras-workers-sig-container');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="p-2 border rounded bg-slate-50 space-y-1 relative kras-worker-row">
+                    <input type="text" placeholder="참석 근로자 성명" value="김철수 (과장)" class="w-full border p-1 rounded font-bold text-xs kras-worker-name-input">
+                    <canvas class="sig-pad w-full h-14 kras-w-sig-canvas"></canvas>
+                </div>
+            `;
+            setTimeout(initKrasSignatures, 50);
+        }
+
+        function addKrasWorkerInput() {
+            const container = document.getElementById('kras-workers-sig-container');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = "p-2 border rounded bg-slate-50 space-y-1 relative kras-worker-row";
+            div.innerHTML = `
+                <button onclick="this.closest('.kras-worker-row').remove()" class="absolute top-1 right-2 text-rose-500 font-bold text-[10px]">삭제</button>
+                <input type="text" placeholder="참석 근로자 성명" class="w-full border p-1 rounded font-bold text-xs kras-worker-name-input">
+                <canvas class="sig-pad w-full h-14 kras-w-sig-canvas"></canvas>
+            `;
+            container.appendChild(div);
+            setTimeout(() => {
+                const canvas = div.querySelector('canvas');
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                canvas.signaturePadInstance = new SignaturePad(canvas);
+            }, 50);
+        }
+
+        function initKrasSignatures() {
+            const evalCanvas = document.getElementById('kras-eval-sig-canvas');
+            if (evalCanvas && !krasEvaluatorSigPad) {
+                evalCanvas.width = evalCanvas.offsetWidth;
+                evalCanvas.height = evalCanvas.offsetHeight;
+                krasEvaluatorSigPad = new SignaturePad(evalCanvas);
+            }
+            document.querySelectorAll('.kras-w-sig-canvas').forEach(canvas => {
+                if (!canvas.signaturePadInstance) {
+                    canvas.width = canvas.offsetWidth;
+                    canvas.height = canvas.offsetHeight;
+                    canvas.signaturePadInstance = new SignaturePad(canvas);
+                }
+            });
+        }
+
+        async function renderRiskCards() {
+            const container = document.getElementById('risk-card-container');
+            if (!container) return;
+            const selectedCat = document.getElementById('kras-main-category').value;
+            let items = await db.items.where('category').equals(selectedCat).toArray();
+            
+            container.innerHTML = '';
+            items.forEach((item) => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="bg-white p-4 rounded-xl border space-y-3 relative text-xs shadow-sm kras-card-item" data-id="${item.id}">
+                        <div><label class="block font-bold text-blue-700 mb-1">공정명</label><input type="text" value="${item.processName}" onchange="updateKrasItem(${item.id}, 'processName', this.value)" class="w-full border rounded p-1.5 font-bold kras-process"></div>
+                        <div><label class="block font-bold text-slate-700 mb-1">세부작업명</label><input type="text" value="${item.step}" onchange="updateKrasItem(${item.id}, 'step', this.value)" class="w-full border rounded p-1.5 kras-step"></div>
+                        <div><label class="block font-bold text-slate-700 mb-1">유해·위험요인</label><textarea onchange="updateKrasItem(${item.id}, 'hazard', this.value)" class="w-full border rounded p-1.5 kras-hazard">${item.hazard}</textarea></div>
+                        <div><label class="block font-bold text-slate-700 mb-1">개선대책</label><textarea onchange="updateKrasItem(${item.id}, 'actionPlan', this.value)" class="w-full border rounded p-1.5 kras-action">${item.actionPlan}</textarea></div>
+                    </div>
+                `);
+            });
+        }
+
+        async function updateKrasItem(id, key, val) { await db.items.update(id, { [key]: val }); }
+
+        async function addAssessmentCard() {
+            const selectedCat = document.getElementById('kras-main-category').value;
+            await db.items.add({ category: selectedCat, processName: "점검공정", step: "작업", hazard: "위험요인", likelihood: 1, severity: 3, actionPlan: "대책", afterLikelihood: 1, afterSeverity: 2 });
+            renderRiskCards();
+        }
+
+        async function saveTbmDataCloud() {
+            const siteName = document.getElementById('tbm-site-name').value;
+            const workDate = document.getElementById('tbm-work-date').value;
+            const processName = document.getElementById('tbm-process-name').value;
+            const tbmLeader = document.getElementById('tbm-leader').value;
+            const notes = document.getElementById('tbm-notes').value;
+
+            const payload = {
+                id: 'tbm_' + Date.now(),
+                type: 'TBM',
+                siteName,
+                workDate,
+                processName,
+                tbmLeader,
+                author: tbmLeader,
+                notes,
+                createdAt: new Date().toISOString()
+            };
+
+            await db.reports.add(payload);
+
+            if (!GOOGLE_SCRIPT_API_URL.includes("여기에_구글_웹앱_URL을_입력하세요")) {
+                try {
+                    await fetch(GOOGLE_SCRIPT_API_URL, {
+                        method: "POST", mode: "no-cors",
+                        body: JSON.stringify({ type: 'riskReport', payload })
+                    });
+                } catch(e) { console.error(e); }
+            }
+
+            alert('✅ TBM 보고서가 저장되고 구글 시트로 전송되었습니다!');
+        }
+
+        async function saveKrasDataCloud() {
+            const siteName = document.getElementById('kras-site-name').value;
+            const workDate = document.getElementById('kras-work-date').value;
+            const selectedCat = document.getElementById('kras-main-category').value;
+            const evaluator = document.getElementById('kras-evaluator').value;
+
+            const payload = {
+                id: 'kras_' + Date.now(),
+                type: '위험성평가',
+                siteName,
+                workDate,
+                processName: selectedCat,
+                author: evaluator,
+                createdAt: new Date().toISOString()
+            };
+
+            await db.reports.add(payload);
+
+            if (!GOOGLE_SCRIPT_API_URL.includes("여기에_구글_웹앱_URL을_입력하세요")) {
+                try {
+                    await fetch(GOOGLE_SCRIPT_API_URL, {
+                        method: "POST", mode: "no-cors",
+                        body: JSON.stringify({ type: 'riskReport', payload })
+                    });
+                } catch(e) { console.error(e); }
+            }
+
+            alert('✅ 위험성평가 보고서가 저장되고 구글 시트로 전송되었습니다!');
+        }
+
+        async function openTbmPreviewModal() {
+            const siteName = document.getElementById('tbm-site-name').value;
+            const workDate = document.getElementById('tbm-work-date').value;
+            const tbmTime = document.getElementById('tbm-time').value;
+            const processName = document.getElementById('tbm-process-name').value;
+            const tbmLeader = document.getElementById('tbm-leader').value;
+            const notes = document.getElementById('tbm-notes').value;
+
+            let workers = await db.workers.toArray();
+            let workersHtml = workers.map(w => {
+                let pad = signaturePadsInstances[w.id];
+                let sigImg = (pad && !pad.isEmpty()) ? pad.toDataURL() : '';
+                return `<div class="inline-block border p-2 m-1 rounded bg-white text-center"><div class="font-bold">${w.name}</div>${sigImg ? `<img src="${sigImg}" class="h-10 mx-auto mt-1 border">` : '<span class="text-slate-300 text-[10px]">서명없음</span>'}</div>`;
+            }).join('');
+
+            document.getElementById('preview-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-blue-600"></i> TBM 보고서 상세 미리보기`;
+            document.getElementById('report-preview-content').innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border">
+                        <div><b>현장명:</b> ${siteName}</div>
+                        <div><b>작업일자:</b> ${workDate} (${tbmTime})</div>
+                        <div><b>공종구분:</b> ${processName}</div>
+                        <div><b>TBM 리더:</b> ${tbmLeader}</div>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border space-y-1">
+                        <div class="font-bold text-slate-700">■ TBM 필수 점검 항목</div>
+                        <div>[✔] 근로자 건강상태 확인 (음주·피로·혈압)</div>
+                        <div>[✔] 개인보호구 착용 점검 (안전모·절연장갑·안전대)</div>
+                        <div>[✔] 작업구역 출입통제 및 바리케이드 설치</div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1">■ 참석 근로자 및 서명</h4>
+                        <div class="bg-white p-3 rounded-xl border flex flex-wrap gap-2">${workersHtml || '등록된 근로자 없음'}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1">■ 특이사항</h4>
+                        <div class="bg-white p-3 rounded-xl border">${notes || '없음'}</div>
+                    </div>
+                    ${tbmPhotoData ? `<div><h4 class="font-bold text-slate-700 mb-1">■ 현장 사진</h4><img src="${tbmPhotoData}" class="h-40 rounded-lg border object-cover"></div>` : ''}
+                </div>
+            `;
+            document.getElementById('report-preview-modal').classList.remove('hidden');
+        }
+
+        async function openKrasPreviewModal() {
+            const siteName = document.getElementById('kras-site-name').value;
+            const workDate = document.getElementById('kras-work-date').value;
+            const evaluator = document.getElementById('kras-evaluator').value;
+            const selectedCat = document.getElementById('kras-main-category').value;
+
+            let items = document.querySelectorAll('.kras-card-item');
+            let rowsHtml = '';
+            items.forEach((item, idx) => {
+                let p = item.querySelector('.kras-process').value;
+                let s = item.querySelector('.kras-step').value;
+                let h = item.querySelector('.kras-hazard').value;
+                let a = item.querySelector('.kras-action').value;
+                rowsHtml += `<tr><td>${idx+1}</td><td>${p}</td><td>${s}</td><td>${h}</td><td>${a}</td></tr>`;
+            });
+
+            document.getElementById('preview-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-blue-600"></i> 위험성평가 보고서 상세 미리보기`;
+            document.getElementById('report-preview-content').innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border">
+                        <div><b>현장명:</b> ${siteName}</div>
+                        <div><b>평가일자:</b> ${workDate}</div>
+                        <div><b>대분류:</b> ${selectedCat}</div>
+                        <div><b>평가담당자:</b> ${evaluator}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700 mb-1">■ 평가 항목 목록</h4>
+                        <div class="bg-white p-3 rounded-xl border overflow-x-auto">
+                            <table class="pdf-table">
+                                <thead><tr><th>번호</th><th>공정명</th><th>세부작업</th><th>유해·위험요인</th><th>개선대책</th></tr></thead>
+                                <tbody>${rowsHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('report-preview-modal').classList.remove('hidden');
+        }
+
+        function closeReportPreviewModal() {
+            document.getElementById('report-preview-modal').classList.add('hidden');
+        }
+
+        async function generateTbmReportPDF() {
+            const siteName = document.getElementById('tbm-site-name').value;
+            const workDate = document.getElementById('tbm-work-date').value;
+            const processName = document.getElementById('tbm-process-name').value;
+            const tbmLeader = document.getElementById('tbm-leader').value;
+            const notes = document.getElementById('tbm-notes').value;
+
+            document.getElementById('pdf-tbm-site').textContent = siteName;
+            document.getElementById('pdf-tbm-date').textContent = workDate;
+            document.getElementById('pdf-tbm-process').textContent = processName;
+            document.getElementById('pdf-tbm-leader').textContent = tbmLeader;
+            document.getElementById('pdf-tbm-notes').textContent = notes || '없음';
+
+            if (tbmPhotoData) {
+                document.getElementById('pdf-tbm-photo-img').src = tbmPhotoData;
+                document.getElementById('pdf-tbm-photo-container').classList.remove('hidden');
+            } else {
+                document.getElementById('pdf-tbm-photo-container').classList.add('hidden');
+            }
+
+            let workers = await db.workers.toArray();
+            let workersPdfHtml = workers.map(w => {
+                let pad = signaturePadsInstances[w.id];
+                let sigImg = (pad && !pad.isEmpty()) ? pad.toDataURL() : '';
+                return `<div style="display:inline-block; border:1px solid #cbd5e1; padding:6px; margin:4px; text-align:center; width:100px; background:#fff;"><div style="font-weight:bold; font-size:10px;">${w.name}</div>${sigImg ? `<img src="${sigImg}" style="height:30px; margin:2px auto; display:block;">` : '<div style="font-size:9px; color:#94a3b8;">서명없음</div>'}</div>`;
+            }).join('');
+            document.getElementById('pdf-tbm-workers').innerHTML = workersPdfHtml;
+
+            const opt = {
+                margin: 0,
+                filename: `TBM_보고서_${siteName}_${workDate}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(document.getElementById('printable-tbm-pdf')).save();
+        }
+
+        async function generateKrasReportPDF() {
+            const siteName = document.getElementById('kras-site-name').value;
+            const workDate = document.getElementById('kras-work-date').value;
+
+            let items = document.querySelectorAll('.kras-card-item');
+            let rowsHtml = '';
+            items.forEach((item) => {
+                let p = item.querySelector('.kras-process').value;
+                let s = item.querySelector('.kras-step').value;
+                let h = item.querySelector('.kras-hazard').value;
+                let a = item.querySelector('.kras-action').value;
+                rowsHtml += `<tr><td style="border:1px solid #cbd5e1; padding:6px;">${p}</td><td style="border:1px solid #cbd5e1; padding:6px;">${s}</td><td style="border:1px solid #cbd5e1; padding:6px;">${h}</td><td style="border:1px solid #cbd5e1; padding:6px;">${a}</td></tr>`;
+            });
+            document.getElementById('pdf-kras-rows').innerHTML = rowsHtml;
+
+            const opt = {
+                margin: 0,
+                filename: `위험성평가보고서_${siteName}_${workDate}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(document.getElementById('printable-kras-pdf')).save();
+        }
+
+        function previewTbmPhoto(input) {
+            if (input.files && input.files[0]) {
+                let reader = new FileReader();
+                reader.onload = e => { tbmPhotoData = e.target.result; document.getElementById('tbm-photo-img').src = tbmPhotoData; document.getElementById('tbm-photo-preview').classList.remove('hidden'); };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function searchHistoryRecords() {
+            const container = document.getElementById('search-results-list');
+            if (!container) return;
+            let reports = await db.reports.reverse().toArray();
+            container.innerHTML = reports.map(r => `
+                <div class="bg-white p-4 rounded-xl border text-xs space-y-1">
+                    <div class="font-bold text-slate-800">[${r.type}] ${r.siteName} (${r.workDate})</div>
+                    <div class="text-slate-500">작성자: ${r.author} / 공종: ${r.processName}</div>
+                </div>
+            `).join('') || '<div class="text-center text-xs text-slate-400">이력 없음</div>';
+        }
+
+        async function renderEmergencyContacts() {
+            const container = document.getElementById('contacts-list');
+            if (!container) return;
+            let contacts = await db.contacts.toArray();
+            container.innerHTML = contacts.map(c => `<div class="p-3 border rounded-xl bg-slate-50 text-xs font-bold">${c.name} (${c.dept}) - ${c.phone}</div>`).join('') || '<div class="text-center text-xs text-slate-400">연락망 없음</div>';
+        }
+
+        async function addEmergencyContact() {
+            const name = document.getElementById('contact-name').value;
+            const dept = document.getElementById('contact-dept').value;
+            const phone = document.getElementById('contact-phone').value;
+            const role = document.getElementById('contact-role').value;
+            if (name && phone) { await db.contacts.add({ name, dept, phone, role }); renderEmergencyContacts(); alert("등록완료"); }
+        }
+
+        function exportHistoryToExcel() { alert("엑셀 다운로드"); }
+    </script>
+</body>
+</html>
